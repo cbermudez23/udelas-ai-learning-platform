@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --clr-brand: #003366;
+  --clr-brand2: #0055aa;
+  --clr-accent: #e8a020;
+  --clr-gold: #c8891a;
+
+  --bg-primary: #ffffff;
+  --bg-secondary: #f4f6f9;
+  --bg-tertiary: #eef1f5;
+  --text-primary: #14213a;
+  --text-secondary: #4a5568;
+  --text-tertiary: #8a94a6;
+  --border-tertiary: #e4e8ef;
+  --border-secondary: #d3d9e3;
+}
+
+body {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.chip {
+  display: inline-block;
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+.chip-blue { background: #eef3ff; color: #1a4db0; }
+.chip-green { background: #e4f5ec; color: #1a7a45; }
+.chip-amber { background: #fdf3e3; color: #8a5a10; }
+.chip-red { background: #fdeaea; color: #a03030; }
+.chip-purple { background: #f0eaff; color: #5530a0; }
+
+.card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-tertiary);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.prog-bar {
+  height: 6px;
+  background: var(--bg-secondary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.prog-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--clr-brand2);
+}
+.prog-fill.amber { background: var(--clr-accent); }
+.prog-fill.green { background: #22a05b; }
+.prog-fill.red { background: #c84040; }
