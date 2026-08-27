@@ -1,6 +1,6 @@
 databases:
   - name: udelas-ai-platform-db
-    plan: free
+    plan: basic-256mb
     databaseName: udelas_ai_platform
     user: udelas
 
