@@ -1,0 +1,203 @@
+// UDELAS AI Learning Platform — Esquema de base de datos (MVP)
+// Motor: PostgreSQL (Render Managed Postgres)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  PROFESSOR
+  ADMIN
+}
+
+enum AgentType {
+  TUTOR
+  PROFESSOR_QUESTION_BANK
+  PROFESSOR_RUBRIC
+  PROFESSOR_STUDY_GUIDE
+  PROFESSOR_FEEDBACK
+  ADVISOR
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(STUDENT)
+  avatarInitials String @default("UD")
+  createdAt    DateTime @default(now())
+
+  enrollments        Enrollment[]
+  chatMessages       ChatMessage[]
+  examAttempts       ExamAttempt[]
+  calendarEvents     CalendarEvent[]
+  credentialProgress UserMicrocredentialProgress[]
+  badges             UserBadge[]
+  portfolioItems     PortfolioItem[]
+}
+
+model Course {
+  id            String   @id @default(cuid())
+  name          String
+  category      String
+  professorName String
+  colorTheme    String   @default("blue")
+  icon          String   @default("book")
+  createdAt     DateTime @default(now())
+
+  enrollments Enrollment[]
+  exams       Exam[]
+}
+
+model Enrollment {
+  id              String   @id @default(cuid())
+  userId          String
+  courseId        String
+  progressPercent Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  grades Grade[]
+
+  @@unique([userId, courseId])
+}
+
+model Grade {
+  id           String   @id @default(cuid())
+  enrollmentId String
+  label        String   // Parcial 1, Parcial 2, Final
+  score        Float
+  createdAt    DateTime @default(now())
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+}
+
+model CalendarEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  detail    String?
+  date      DateTime
+  colorTag  String   @default("blue")
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ChatMessage {
+  id         String    @id @default(cuid())
+  userId     String
+  role       String    // "user" | "assistant"
+  content    String    @db.Text
+  agentType  AgentType @default(TUTOR)
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Exam {
+  id          String   @id @default(cuid())
+  title       String
+  topic       String
+  courseId    String?
+  createdByAI Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  course    Course?        @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  questions ExamQuestion[]
+  attempts  ExamAttempt[]
+}
+
+model ExamQuestion {
+  id            String @id @default(cuid())
+  examId        String
+  questionText  String @db.Text
+  options       Json   // string[]
+  correctOption Int    // index into options[]
+  explanation   String? @db.Text
+
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+}
+
+model ExamAttempt {
+  id          String   @id @default(cuid())
+  examId      String
+  userId      String
+  score       Float
+  totalItems  Int
+  answers     Json
+  completedAt DateTime @default(now())
+
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LibraryDocument {
+  id        String   @id @default(cuid())
+  title     String
+  type      String   // reglamento, libro, articulo, guia
+  content   String   @db.Text
+  tags      String[]
+  createdAt DateTime @default(now())
+}
+
+model Microcredential {
+  id          String @id @default(cuid())
+  name        String
+  description String
+  steps       Json   // { label: string }[]
+
+  progress UserMicrocredentialProgress[]
+}
+
+model UserMicrocredentialProgress {
+  id                String @id @default(cuid())
+  userId            String
+  microcredentialId String
+  currentStep       Int    @default(0)
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  microcredential Microcredential @relation(fields: [microcredentialId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, microcredentialId])
+}
+
+model Badge {
+  id          String @id @default(cuid())
+  name        String
+  description String
+  icon        String
+
+  users UserBadge[]
+}
+
+model UserBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  badgeId   String
+  earnedAt  DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+}
+
+model PortfolioItem {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  type        String   // proyecto, ensayo, certificado, evidencia
+  description String   @db.Text
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
