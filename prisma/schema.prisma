@@ -41,6 +41,22 @@ model User {
   credentialProgress UserMicrocredentialProgress[]
   badges             UserBadge[]
   portfolioItems     PortfolioItem[]
+  ltiLink            LtiUserLink?
+}
+
+// Vincula una cuenta de Moodle (identificada por su "sub" en el token LTI)
+// con una cuenta de esta plataforma, para que el inicio de sesión desde
+// Moodle sea automático (sin pedir usuario/contraseña de nuevo).
+model LtiUserLink {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  ltiSub       String   // Identificador único del usuario según Moodle
+  deploymentId String   // Identifica desde qué "despliegue" de Moodle vino
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([ltiSub, deploymentId])
 }
 
 model Course {
