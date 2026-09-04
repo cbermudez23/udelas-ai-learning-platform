@@ -11,6 +11,7 @@
  */
 import { prisma } from "@/lib/prisma";
 import { Role } from "@prisma/client";
+import { registerModuleDocuments, pruneCourseDocuments, indexPendingDocuments } from "@/lib/library";
 import {
   moodle,
   moodleBaseUrl,
@@ -32,13 +33,14 @@ export interface SyncReport {
   assignments: number;
   grades: number;
   users: number;
+  documents: number;
   errors: string[];
   startedAt: string;
   finishedAt?: string;
 }
 
 function newReport(): SyncReport {
-  return { courses: 0, enrollments: 0, contents: 0, assignments: 0, grades: 0, users: 0, errors: [], startedAt: new Date().toISOString() };
+  return { courses: 0, enrollments: 0, contents: 0, assignments: 0, grades: 0, users: 0, documents: 0, errors: [], startedAt: new Date().toISOString() };
 }
 
 function stripHtml(html?: string | null): string {
@@ -113,10 +115,20 @@ async function syncCourseContents(courseId: string, sections: MoodleSection[], r
       });
       order++;
       report.contents++;
+
+      // Biblioteca IA: archivos, páginas y libros del módulo
+      if (["resource", "folder", "page", "book"].includes(m.modname)) {
+        try {
+          report.documents += await registerModuleDocuments(courseId, m, moodleBaseUrl());
+        } catch (e: any) {
+          report.errors.push(`Biblioteca (${m.name}): ${e.message}`);
+        }
+      }
     }
   }
-  // Eliminamos módulos que ya no existen en Moodle
+  // Eliminamos módulos (y sus documentos) que ya no existen en Moodle
   await prisma.courseContent.deleteMany({ where: { courseId, moodleModuleId: { notIn: seen } } });
+  await pruneCourseDocuments(courseId, seen);
 }
 
 async function syncAssignments(courseId: string, assignments: MoodleAssignment[], report: SyncReport) {
@@ -338,8 +350,19 @@ export async function syncUser(userId: string): Promise<SyncReport> {
     }
   }
 
+  await indexDocuments(report, 10);
   report.finishedAt = new Date().toISOString();
   return report;
+}
+
+/** Descarga e indexa documentos pendientes de la Biblioteca IA (acotado por corrida). */
+async function indexDocuments(report: SyncReport, limit: number) {
+  try {
+    const r = await indexPendingDocuments(limit);
+    report.errors.push(...r.errors.map((e) => `Biblioteca: ${e}`));
+  } catch (e: any) {
+    report.errors.push(`Biblioteca (indexado): ${e.message}`);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -375,6 +398,7 @@ export async function syncAll(): Promise<SyncReport> {
     }
   }
 
+  await indexDocuments(report, 25);
   report.finishedAt = new Date().toISOString();
   return report;
 }

@@ -57,7 +57,7 @@ async function logRun(scope: string, triggeredBy: string, r: Awaited<ReturnType<
         startedAt: new Date(r.startedAt),
         finishedAt: r.finishedAt ? new Date(r.finishedAt) : new Date(),
         ok: r.errors.length === 0,
-        summary: `${r.courses} curso(s), ${r.enrollments} matrícula(s), ${r.contents} contenido(s), ${r.assignments} tarea(s), ${r.grades} nota(s), ${r.users} usuario(s) nuevo(s)`,
+        summary: `${r.courses} curso(s), ${r.enrollments} matrícula(s), ${r.contents} contenido(s), ${r.assignments} tarea(s), ${r.grades} nota(s), ${r.documents} documento(s), ${r.users} usuario(s) nuevo(s)`,
         errors: r.errors.length ? r.errors.join("\n") : null
       }
     });

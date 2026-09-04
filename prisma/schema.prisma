@@ -81,6 +81,7 @@ model Course {
   exams       Exam[]
   contents    CourseContent[]
   assignments Assignment[]
+  documents   LibraryDocument[]
 }
 
 // Un recurso o actividad dentro de un curso de Moodle (archivo, página, foro, tarea, cuestionario...)
@@ -209,10 +210,41 @@ model ExamAttempt {
 model LibraryDocument {
   id        String   @id @default(cuid())
   title     String
-  type      String   // reglamento, libro, articulo, guia
-  content   String   @db.Text
+  type      String   // reglamento, libro, articulo, guia, pdf, docx, page, book, texto
+  content   String   @db.Text   // texto extraído (recortado a ~200k caracteres)
   tags      String[]
   createdAt DateTime @default(now())
+
+  // ---- Origen Moodle ----
+  courseId       String?
+  moodleModuleId Int?
+  moodleFileName String?
+  moodleFileUrl  String?
+  moodleUrl      String?      // enlace a la actividad/recurso en Moodle
+  mimeType       String?
+  fileSize       Int?
+  timeModified   DateTime?
+  status         String    @default("indexed") // pending | indexed | unsupported | error
+  error          String?
+  indexedAt      DateTime?
+
+  course Course?         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  chunks LibraryChunk[]
+
+  @@unique([moodleModuleId, moodleFileName])
+  @@index([courseId])
+}
+
+// Fragmento de texto de un documento (unidad de búsqueda para el Tutor IA)
+model LibraryChunk {
+  id         String @id @default(cuid())
+  documentId String
+  order      Int
+  text       String @db.Text
+
+  document LibraryDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
 }
 
 model Microcredential {

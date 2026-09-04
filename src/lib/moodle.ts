@@ -97,6 +97,17 @@ export interface MoodleSection {
   modules: MoodleModule[];
 }
 
+export interface MoodleModuleContent {
+  type: string;        // file | url | content
+  filename: string;
+  filepath?: string;
+  filesize?: number;
+  fileurl?: string;
+  content?: string;    // html embebido (páginas, libros)
+  timemodified?: number;
+  mimetype?: string;
+}
+
 export interface MoodleModule {
   id: number;
   name: string;
@@ -105,6 +116,7 @@ export interface MoodleModule {
   description?: string;
   visible?: number;
   instance?: number;
+  contents?: MoodleModuleContent[];
 }
 
 export interface MoodleEnrolledUser {
@@ -205,6 +217,16 @@ export const moodle = {
     return r.statuses ?? [];
   }
 };
+
+/** Descarga un archivo de Moodle (pluginfile) usando el token del servicio. */
+export async function moodleDownload(fileurl: string): Promise<{ buffer: Buffer; contentType: string }> {
+  const token = env("MOODLE_WS_TOKEN");
+  const sep = fileurl.includes("?") ? "&" : "?";
+  const res = await fetch(`${fileurl}${sep}token=${encodeURIComponent(token)}`, { cache: "no-store" });
+  if (!res.ok) throw new MoodleError(`No se pudo descargar el archivo (HTTP ${res.status})`);
+  const ab = await res.arrayBuffer();
+  return { buffer: Buffer.from(ab), contentType: res.headers.get("content-type") || "" };
+}
 
 /** Base pública de Moodle (para armar enlaces "Abrir en Moodle"). */
 export function moodleBaseUrl(): string {

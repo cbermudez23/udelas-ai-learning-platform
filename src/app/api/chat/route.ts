@@ -108,10 +108,24 @@ export async function POST(req: NextRequest) {
     ? `\n\nCursos donde ${session.user.name} es DOCENTE (seguimiento de estudiantes):\n${teacherContextText(teaching)}\nCuando el docente pida materiales, básate en los contenidos y tareas reales de su curso listados arriba. Nunca inventes nombres de estudiantes.`
     : "";
 
+  // Biblioteca IA: fragmentos de los materiales reales relevantes para la pregunta
+  let materialsBlock = "";
+  try {
+    const { searchChunks, materialsContextText } = await import("@/lib/library");
+    const courseIds = enrollments.map((e) => e.course.id);
+    const hits = await searchChunks(message, courseIds, 5);
+    const mats = materialsContextText(hits);
+    if (mats) {
+      materialsBlock = `\n\nMateriales del curso relevantes (extraídos de Moodle). Cuando los uses, cita la fuente entre corchetes, ej. [Material 2]:\n${mats}`;
+    }
+  } catch (e) {
+    console.warn("Búsqueda en Biblioteca IA falló:", e);
+  }
+
   const academicContext =
     contextLines.length > 0
-      ? `Contexto académico de ${session.user.name} (fecha actual: ${now.toLocaleDateString("es-PA")}):\n${contextLines.join("\n")}${teacherBlock}`
-      : `El usuario ${session.user.name} aún no tiene cursos en el sistema.`;
+      ? `Contexto académico de ${session.user.name} (fecha actual: ${now.toLocaleDateString("es-PA")}):\n${contextLines.join("\n")}${teacherBlock}${materialsBlock}`
+      : `El usuario ${session.user.name} aún no tiene cursos en el sistema.${materialsBlock}`;
 
   // Historial reciente de la conversación (por tipo de agente)
   const history = await prisma.chatMessage.findMany({

@@ -2,6 +2,34 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import ChatPanel from "@/components/ChatPanel";
 import { notFound } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
+
+// Las sugerencias se construyen con el primer curso real del usuario (Moodle)
+function buildPrompts(slug: string, course?: { name: string; sections: string[]; assignments: string[] }): string[] {
+  const c = course?.name;
+  const sec = course?.sections[0];
+  const task = course?.assignments[0];
+  switch (slug) {
+    case "PROFESSOR_QUESTION_BANK":
+      return c
+        ? [`Genera 5 preguntas de opción múltiple sobre ${sec ? `"${sec}" de ` : ""}${c}`, `Genera 3 preguntas de desarrollo sobre los contenidos de ${c}`]
+        : ["Genera 5 preguntas de opción múltiple sobre el tema que indique"];
+    case "PROFESSOR_RUBRIC":
+      return c ? [`Crea una rúbrica para ${task ? `"${task}"` : `una actividad de ${c}`}`] : ["Crea una rúbrica para un ensayo"];
+    case "PROFESSOR_STUDY_GUIDE":
+      return c ? [`Prepara una guía de estudio sobre ${sec ? `"${sec}" de ` : ""}${c}`, `Guía para prepararse para ${task || "la próxima tarea"}`] : ["Crea una guía de estudio sobre un tema"];
+    case "PROFESSOR_FEEDBACK":
+      return c ? [`¿Qué mensaje envío a los estudiantes en riesgo de ${c}?`] : [];
+    case "ADVISOR":
+      return c ? ["¿Qué me falta para aprobar este período?", `¿Cómo voy en ${c}?`] : ["¿Qué me falta para aprobar este período?"];
+    default:
+      return [];
+  }
+}
 
 const AGENTS: Record<string, { name: string; greeting: string; prompts: string[] }> = {
   PROFESSOR_QUESTION_BANK: {
@@ -35,9 +63,31 @@ const AGENTS: Record<string, { name: string; greeting: string; prompts: string[]
   }
 };
 
-export default function AgentDetailPage({ params }: { params: { slug: string } }) {
+export default async function AgentDetailPage({ params }: { params: { slug: string } }) {
   const agent = AGENTS[params.slug];
   if (!agent) notFound();
+
+  const session = await getServerSession(authOptions);
+  const enr = await prisma.enrollment.findFirst({
+    where: { userId: session!.user.id },
+    orderBy: [{ roleInCourse: "desc" }, { createdAt: "asc" }], // docente primero
+    include: {
+      course: {
+        include: {
+          contents: { where: { modName: { notIn: ["label", "forum", "lti"] } }, orderBy: [{ sectionOrder: "asc" }, { order: "asc" }], take: 5 },
+          assignments: { orderBy: { dueDate: "asc" }, take: 3 }
+        }
+      }
+    }
+  });
+  const course = enr
+    ? {
+        name: enr.course.name,
+        sections: Array.from(new Set<string>(enr.course.contents.map((c: { sectionName: string }) => c.sectionName).filter((n: string) => !/^(General|Nueva sección)$/i.test(n)))).concat(enr.course.contents.map((c: { name: string }) => c.name as string)),
+        assignments: enr.course.assignments.map((a) => a.name)
+      }
+    : undefined;
+  const prompts = buildPrompts(params.slug, course);
 
   return (
     <div className="space-y-3">
@@ -51,7 +101,7 @@ export default function AgentDetailPage({ params }: { params: { slug: string } }
         agentType={params.slug}
         agentLabel={agent.name}
         greeting={agent.greeting}
-        quickPrompts={agent.prompts}
+        quickPrompts={prompts}
       />
     </div>
   );
