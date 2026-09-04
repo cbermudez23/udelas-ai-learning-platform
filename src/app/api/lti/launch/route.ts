@@ -53,6 +53,24 @@ export async function POST(req: NextRequest) {
       where: { ltiLink: { ltiSub, deploymentId } }
     });
 
+    // Si el usuario ya estaba vinculado, refrescamos su nombre y correo con lo
+    // que Moodle envíe ahora (por si antes no compartía esos datos).
+    if (user) {
+      const updates: { name?: string; email?: string; avatarInitials?: string } = {};
+      if (claims.name && name !== user.name) {
+        updates.name = name;
+        const [f, ...r] = name.split(" ");
+        updates.avatarInitials = ((f?.[0] || "U") + (r[r.length - 1]?.[0] || "D")).toUpperCase();
+      }
+      if (email && email !== user.email) {
+        const taken = await prisma.user.findUnique({ where: { email } });
+        if (!taken) updates.email = email;
+      }
+      if (Object.keys(updates).length > 0) {
+        user = await prisma.user.update({ where: { id: user.id }, data: updates });
+      }
+    }
+
     if (!user && email) {
       // Si ya existe una cuenta con ese correo (ej. creada manualmente), la vinculamos.
       const existing = await prisma.user.findUnique({ where: { email } });
