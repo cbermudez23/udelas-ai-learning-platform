@@ -226,6 +226,49 @@ async function syncCalendarForUser(userId: string, courseName: string, assignmen
 }
 
 // ---------------------------------------------------------------------------
+// Participantes de un curso (docentes y estudiantes) con notas y progreso
+// ---------------------------------------------------------------------------
+
+async function syncCourseParticipants(
+  courseId: string,
+  courseName: string,
+  mc: MoodleCourse,
+  enrolled: { id: number; fullname: string; email?: string; roles?: { shortname: string }[] }[],
+  savedAssignments: { moodleAssignId: number; name: string; dueDate: Date | null; url: string | null }[],
+  report: SyncReport
+) {
+  for (const mu of enrolled) {
+    try {
+      const roles = mu.roles?.map((r) => r.shortname) || [];
+      const local = await resolveLocalUser(mu, roles, report);
+      if (!local) continue;
+      const isTeacher = roles.some((r) => TEACHER_ROLES.has(r));
+
+      let progress: number | null = null;
+      if (!isTeacher) {
+        const completion = await moodle.completion(mc.id, mu.id).catch(() => [] as MoodleCompletionStatus[]);
+        progress = progressFromCompletion(completion);
+      }
+      const enrollment = await upsertEnrollment(local.id, courseId, isTeacher ? "teacher" : "student", progress);
+      report.enrollments++;
+
+      if (!isTeacher) {
+        const items = await moodle.gradeItems(mc.id, mu.id).catch(() => [] as MoodleGradeItem[]);
+        await syncGrades(enrollment.id, items, report);
+        await syncCalendarForUser(local.id, courseName, savedAssignments);
+      }
+    } catch (e: any) {
+      report.errors.push(`Usuario ${mu.fullname} en ${mc.fullname}: ${e.message}`);
+    }
+  }
+  // Quitar matrículas que ya no existen en Moodle (solo de este curso)
+  const stillIds = enrolled.map((u) => u.id);
+  await prisma.enrollment.deleteMany({
+    where: { courseId, user: { moodleUserId: { not: null, notIn: stillIds } } }
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Sincronización de un usuario (rápida)
 // ---------------------------------------------------------------------------
 
@@ -281,10 +324,15 @@ export async function syncUser(userId: string): Promise<SyncReport> {
       const enrollment = await upsertEnrollment(userId, course.id, isTeacher ? "teacher" : "student", progress);
       report.enrollments++;
 
-      if (!isTeacher) await syncGrades(enrollment.id, gradeItems, report);
-
       const saved = await prisma.assignment.findMany({ where: { courseId: course.id } });
-      await syncCalendarForUser(userId, course.name, saved);
+
+      if (isTeacher) {
+        // El docente necesita ver a sus estudiantes al día: sincronizamos a todos los participantes
+        await syncCourseParticipants(course.id, course.name, mc, enrolled, saved, report);
+      } else {
+        await syncGrades(enrollment.id, gradeItems, report);
+        await syncCalendarForUser(userId, course.name, saved);
+      }
     } catch (e: any) {
       report.errors.push(`Curso ${mc.fullname}: ${e.message}`);
     }
@@ -321,30 +369,7 @@ export async function syncAll(): Promise<SyncReport> {
       await syncAssignments(course.id, allAssignments.filter((a) => a.course === mc.id), report);
       const saved = await prisma.assignment.findMany({ where: { courseId: course.id } });
 
-      for (const mu of enrolled) {
-        try {
-          const roles = mu.roles?.map((r) => r.shortname) || [];
-          const local = await resolveLocalUser(mu, roles, report);
-          if (!local) continue;
-          const isTeacher = roles.some((r) => TEACHER_ROLES.has(r));
-
-          let progress: number | null = null;
-          if (!isTeacher) {
-            const completion = await moodle.completion(mc.id, mu.id).catch(() => [] as MoodleCompletionStatus[]);
-            progress = progressFromCompletion(completion);
-          }
-          const enrollment = await upsertEnrollment(local.id, course.id, isTeacher ? "teacher" : "student", progress);
-          report.enrollments++;
-
-          if (!isTeacher) {
-            const items = await moodle.gradeItems(mc.id, mu.id).catch(() => [] as MoodleGradeItem[]);
-            await syncGrades(enrollment.id, items, report);
-            await syncCalendarForUser(local.id, course.name, saved);
-          }
-        } catch (e: any) {
-          report.errors.push(`Usuario ${mu.fullname} en ${mc.fullname}: ${e.message}`);
-        }
-      }
+      await syncCourseParticipants(course.id, course.name, mc, enrolled, saved, report);
     } catch (e: any) {
       report.errors.push(`Curso ${mc.fullname}: ${e.message}`);
     }

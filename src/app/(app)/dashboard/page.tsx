@@ -4,6 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { LayoutDashboard, Sparkles, Lightbulb, TrendingUp, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import Link from "next/link";
+import { teacherOverview } from "@/lib/teacher";
+
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -20,16 +24,29 @@ export default async function DashboardPage() {
     take: 3
   });
 
+  const studentEnrollments = enrollments.filter((e) => e.roleInCourse !== "teacher");
+  const teaching = enrollments.some((e) => e.roleInCourse === "teacher") ? await teacherOverview(userId) : [];
+
   const avgProgress =
-    enrollments.length > 0
+    studentEnrollments.length > 0
       ? Math.round(
-          enrollments.reduce((s, e) => s + e.progressPercent, 0) / enrollments.length
+          studentEnrollments.reduce((s, e) => s + e.progressPercent, 0) / studentEnrollments.length
         )
       : 0;
 
-  const lowestCourse = [...enrollments].sort(
+  const lowestCourse = [...studentEnrollments].sort(
     (a, b) => a.progressPercent - b.progressPercent
   )[0];
+
+  // Recomendación "Próximo paso": la tarea pendiente más cercana; si no hay, la Biblioteca IA
+  const nextAssignment = await prisma.assignment.findFirst({
+    where: { dueDate: { gte: new Date() }, course: { enrollments: { some: { userId } } } },
+    orderBy: { dueDate: "asc" },
+    include: { course: { select: { name: true } } }
+  });
+  const nextStep = nextAssignment
+    ? { value: `Entregar: ${nextAssignment.name}`, sub: `${nextAssignment.course.name} · ${format(nextAssignment.dueDate!, "d 'de' MMMM", { locale: es })}` }
+    : { value: "Explora la Biblioteca IA", sub: "Materiales y apoyo para tus cursos" };
 
   return (
     <div className="space-y-4">
@@ -39,7 +56,7 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-4 gap-3">
         <Stat label="Progreso general" value={`${avgProgress}%`} sub="Promedio de tus cursos" />
-        <Stat label="Cursos activos" value={String(enrollments.length)} sub="Este período académico" />
+        <Stat label="Cursos activos" value={String(studentEnrollments.length)} sub="Este período académico" />
         <Stat
           label="Próximo evento"
           value={events[0] ? format(events[0].date, "d MMM", { locale: es }) : "—"}
@@ -52,6 +69,25 @@ export default async function DashboardPage() {
         />
       </div>
 
+      {teaching.length > 0 && (
+        <div className="card">
+          <div className="text-sm font-medium mb-2">Mis cursos como docente</div>
+          <div className="grid grid-cols-2 gap-3">
+            {teaching.map((t) => (
+              <Link key={t.courseId} href={`/cursos/${t.courseId}`} className="border border-[var(--border-tertiary)] rounded-lg p-3 hover:shadow-md transition-shadow block">
+                <div className="text-[13px] font-medium">{t.courseName}</div>
+                <div className="text-[11px] text-[var(--text-tertiary)] mt-1">
+                  {t.studentCount} estudiante(s) · promedio {t.averageTotal !== null ? `${t.averageTotal}%` : "—"}
+                </div>
+                <div className={`text-[11px] mt-1 font-medium ${t.atRiskCount ? "text-[#B91C1C]" : "text-[#166534]"}`}>
+                  {t.atRiskCount ? `${t.atRiskCount} estudiante(s) en riesgo` : "Todos al día"}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="card">
         <div className="flex items-center justify-between mb-3">
           <div className="text-sm font-medium flex items-center gap-2">
@@ -59,8 +95,9 @@ export default async function DashboardPage() {
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          {enrollments.map((e) => (
-            <div key={e.id} className="border border-[var(--border-tertiary)] rounded-lg p-3">
+          {studentEnrollments.length === 0 && <div className="text-[11px] text-[var(--text-tertiary)] col-span-2">No estás matriculado como estudiante en ningún curso.</div>}
+          {studentEnrollments.map((e) => (
+            <Link href={`/cursos/${e.id ? e.course.id : ""}`} key={e.id} className="border border-[var(--border-tertiary)] rounded-lg p-3 block hover:shadow-md transition-shadow">
               <div className="text-[11px] text-[var(--clr-brand2)] bg-[#EEF3FF] inline-block px-2 py-0.5 rounded-full mb-1">
                 {e.course.category}
               </div>
@@ -76,7 +113,7 @@ export default async function DashboardPage() {
                   style={{ width: `${e.progressPercent}%` }}
                 />
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>
@@ -103,8 +140,8 @@ export default async function DashboardPage() {
             color="#1A4DB0"
             bg="#EEF3FF"
             title="Próximo paso"
-            value="Continúa tu microcredencial"
-            sub={`Estás al ${avgProgress}% del camino`}
+            value={nextStep.value}
+            sub={nextStep.sub}
           />
           <RecoCard
             icon={<Clock className="w-3.5 h-3.5" />}

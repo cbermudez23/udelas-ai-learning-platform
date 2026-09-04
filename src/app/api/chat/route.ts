@@ -101,10 +101,17 @@ export async function POST(req: NextRequest) {
       .join("\n");
   });
 
+  // Si es docente en algún curso, añadimos el seguimiento de sus estudiantes
+  const { teacherOverview, teacherContextText } = await import("@/lib/teacher");
+  const teaching = enrollments.some((e) => e.roleInCourse === "teacher") ? await teacherOverview(userId) : [];
+  const teacherBlock = teaching.length
+    ? `\n\nCursos donde ${session.user.name} es DOCENTE (seguimiento de estudiantes):\n${teacherContextText(teaching)}\nCuando el docente pida materiales, básate en los contenidos y tareas reales de su curso listados arriba. Nunca inventes nombres de estudiantes.`
+    : "";
+
   const academicContext =
     contextLines.length > 0
-      ? `Contexto académico de ${session.user.name} (fecha actual: ${now.toLocaleDateString("es-PA")}):\n${contextLines.join("\n")}`
-      : `El estudiante ${session.user.name} aún no tiene cursos matriculados en el sistema.`;
+      ? `Contexto académico de ${session.user.name} (fecha actual: ${now.toLocaleDateString("es-PA")}):\n${contextLines.join("\n")}${teacherBlock}`
+      : `El usuario ${session.user.name} aún no tiene cursos en el sistema.`;
 
   // Historial reciente de la conversación (por tipo de agente)
   const history = await prisma.chatMessage.findMany({

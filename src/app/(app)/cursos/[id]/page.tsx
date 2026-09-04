@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import TeacherCoursePanel from "@/components/TeacherCoursePanel";
+import { buildCourseTeacherSummary } from "@/lib/teacher";
 import { ArrowLeft, ExternalLink, FileText, Link2, MessageSquare, ClipboardList, HelpCircle, Folder, BookOpen, Video, File } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -61,6 +63,8 @@ export default async function CursoDetallePage({ params }: { params: { id: strin
 
   const { course } = enrollment;
   const now = new Date();
+  const isTeacher = enrollment.roleInCourse === "teacher";
+  const teacherSummary = isTeacher ? await buildCourseTeacherSummary(course.id) : null;
 
   // Agrupar contenidos por sección (respetando el orden de Moodle)
   const sections: { order: number; name: string; items: typeof course.contents }[] = [];
@@ -101,7 +105,7 @@ export default async function CursoDetallePage({ params }: { params: { id: strin
             </a>
           )}
         </div>
-        <div className="mt-3">
+        {!isTeacher && <div className="mt-3">
           <div className="flex justify-between text-[11px] mb-1">
             <span>Progreso</span>
             <span className="font-medium">{enrollment.progressPercent}%</span>
@@ -109,13 +113,15 @@ export default async function CursoDetallePage({ params }: { params: { id: strin
           <div className="prog-bar">
             <div className="prog-fill" style={{ width: `${enrollment.progressPercent}%` }} />
           </div>
-        </div>
+        </div>}
         {course.lastSyncedAt && (
           <div className="text-[10px] text-[var(--text-tertiary)] mt-2">
             Sincronizado desde Moodle: {course.lastSyncedAt.toLocaleString("es-PA")}
           </div>
         )}
       </div>
+
+      {teacherSummary && <TeacherCoursePanel summary={teacherSummary} />}
 
       <div className="grid grid-cols-3 gap-3">
         <div className="col-span-2 space-y-3">
@@ -173,8 +179,8 @@ export default async function CursoDetallePage({ params }: { params: { id: strin
             })}
           </div>
 
-          <div className="text-[13px] font-medium">Calificaciones</div>
-          <div className="card space-y-1.5">
+          {!isTeacher && <div className="text-[13px] font-medium">Calificaciones</div>}
+          {!isTeacher && <div className="card space-y-1.5">
             {enrollment.grades.length === 0 && <div className="text-[11px] text-[var(--text-tertiary)]">Sin notas aún.</div>}
             {enrollment.grades.map((g) => (
               <div key={g.id} className="flex justify-between text-[11px]">
@@ -185,12 +191,12 @@ export default async function CursoDetallePage({ params }: { params: { id: strin
                 </span>
               </div>
             ))}
-          </div>
+          </div>}
 
-          <Link href="/tutor" className="card block text-[11px] hover:shadow-md transition-shadow">
+          {!isTeacher && <Link href="/tutor" className="card block text-[11px] hover:shadow-md transition-shadow">
             <div className="font-medium text-[var(--clr-brand2)]">✨ Preguntar al Tutor IA sobre este curso</div>
             <div className="text-[10px] text-[var(--text-tertiary)] mt-0.5">El tutor ya conoce tus contenidos, tareas y notas.</div>
-          </Link>
+          </Link>}
         </div>
       </div>
     </div>
