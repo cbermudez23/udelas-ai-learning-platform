@@ -60,7 +60,8 @@ function tsToDate(ts?: number | null): Date | null {
 
 async function upsertCourse(mc: MoodleCourse, categoryNames: Map<number, string>) {
   const professorName = mc.contacts?.map((c) => c.fullname).join(", ") || "Docente por asignar";
-  const category = (mc.categoryid && categoryNames.get(mc.categoryid)) || "Moodle";
+  const catId = mc.categoryid ?? mc.category;
+  const category = (catId && categoryNames.get(catId)) || "Moodle";
   const base = moodleBaseUrl();
   const data = {
     name: mc.fullname,

@@ -75,6 +75,7 @@ export interface MoodleCourse {
   fullname: string;
   displayname?: string;
   categoryid?: number;
+  category?: number; // core_enrol_get_users_courses usa este nombre
   summary?: string;
   visible?: number;
   startdate?: number;
@@ -183,7 +184,7 @@ export const moodle = {
     if (courseIds.length === 0) return [];
     const r = await moodleCall<{ courses: { id: number; assignments: MoodleAssignment[] }[] }>(
       "mod_assign_get_assignments",
-      { courseids: courseIds }
+      { courseids: courseIds, includenotenrolledcourses: 1 }
     );
     return r.courses.flatMap((c) => c.assignments.map((a) => ({ ...a, course: c.id })));
   },
