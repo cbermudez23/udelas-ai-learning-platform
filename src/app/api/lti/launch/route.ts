@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     }
 
     const deploymentId = claims[DEPLOYMENT_CLAIM] as string;
-    if (!deploymentId || deploymentId !== process.env.MOODLE_DEPLOYMENT_ID) {
+    if (!deploymentId || String(deploymentId).trim() !== (process.env.MOODLE_DEPLOYMENT_ID || "").trim()) {
       return htmlError("Este despliegue de Moodle no está autorizado.");
     }
 

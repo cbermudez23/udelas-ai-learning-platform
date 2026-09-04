@@ -27,7 +27,7 @@ async function handleLogin(searchParams: URLSearchParams) {
   const loginHint = searchParams.get("login_hint");
   const targetLinkUri = searchParams.get("target_link_uri");
   const ltiMessageHint = searchParams.get("lti_message_hint");
-  const clientId = searchParams.get("client_id") || process.env.MOODLE_CLIENT_ID;
+  const clientId = searchParams.get("client_id") || (process.env.MOODLE_CLIENT_ID || "").trim().split(",")[0].trim();
 
   if (!iss || !loginHint || !targetLinkUri) {
     return NextResponse.json(
@@ -36,7 +36,7 @@ async function handleLogin(searchParams: URLSearchParams) {
     );
   }
 
-  if (iss !== process.env.MOODLE_ISSUER) {
+  if (iss.trim() !== (process.env.MOODLE_ISSUER || "").trim()) {
     return NextResponse.json(
       { error: `La plataforma "${iss}" no está autorizada para usar esta herramienta.` },
       { status: 403 }
