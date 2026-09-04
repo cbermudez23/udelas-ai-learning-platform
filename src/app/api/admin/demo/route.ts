@@ -19,9 +19,9 @@ export async function DELETE() {
   });
   const events = await prisma.calendarEvent.deleteMany({ where: { moodleKey: null } });
   const portfolio = await prisma.portfolioItem.deleteMany({});
-  const library = await prisma.libraryDocument.deleteMany({});
-  const badges = await prisma.badge.deleteMany({});
-  const micro = await prisma.microcredential.deleteMany({});
+  const library = await prisma.libraryDocument.deleteMany({ where: { moodleModuleId: null } });
+  const badges = await prisma.badge.deleteMany({ where: { source: "LOCAL" } });
+  const micro = await prisma.microcredential.deleteMany({ where: { source: "LOCAL" } });
 
   return NextResponse.json({
     ok: true,

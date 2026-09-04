@@ -70,6 +70,7 @@ export default async function BibliotecaPage() {
                     {d.status === "error" && <span className="text-[10px] text-[#B91C1C] inline-flex items-center gap-1" title={d.error || ""}><AlertCircle className="w-3 h-3" /> Error al indexar</span>}
                   </div>
                   {d.status === "indexed" && d.content && <div className="text-[10px] text-[var(--text-tertiary)] line-clamp-2 mt-0.5">{d.content.slice(0, 220)}</div>}
+                  {d.status === "error" && d.error && <div className="text-[10px] text-[#B91C1C] mt-0.5">{d.error}</div>}
                 </div>
                 {d.moodleUrl && (
                   <a href={d.moodleUrl} target="_blank" rel="noreferrer" className="text-[10px] text-[var(--clr-brand2)] inline-flex items-center gap-1 shrink-0 hover:underline">

@@ -185,6 +185,7 @@ export async function indexPendingDocuments(limit = 10): Promise<{ indexed: numb
       if (n === 0) errors.push(`${d.title}: sin fragmentos útiles`);
     } catch (e: any) {
       failed++;
+      console.error(`Biblioteca IA: error al indexar "${d.title}" (${d.moodleFileName}):`, e);
       errors.push(`${d.title}: ${e.message}`);
       await prisma.libraryDocument.update({ where: { id: d.id }, data: { status: "error", error: String(e.message).slice(0, 500) } });
     }

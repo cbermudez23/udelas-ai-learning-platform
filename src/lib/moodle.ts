@@ -153,6 +153,23 @@ export interface MoodleCompletionStatus {
   state: number; // 0 incompleto, 1 completo, 2 aprobado, 3 reprobado
 }
 
+export interface MoodleUserBadge {
+  id: number;
+  name: string;
+  description?: string;
+  badgeurl?: string;
+  dateissued?: number;
+  courseid?: number | null;
+  issuername?: string;
+}
+
+export interface MoodleCompetency {
+  id: number;
+  shortname: string;
+  description?: string;
+  idnumber?: string;
+}
+
 // ---------- Funciones de alto nivel ----------
 
 export const moodle = {
@@ -209,6 +226,36 @@ export const moodle = {
     return r.usergrades?.[0]?.gradeitems ?? [];
   },
 
+  /** Insignias obtenidas por un usuario (requiere core_badges_get_user_badges). */
+  userBadges: async (moodleUserId: number) => {
+    const r = await moodleCall<{ badges: MoodleUserBadge[] }>("core_badges_get_user_badges", { userid: moodleUserId });
+    return r.badges ?? [];
+  },
+
+  /** Competencias asociadas a un curso (requiere core_competency_list_course_competencies). */
+  courseCompetencies: async (courseId: number) => {
+    const r = await moodleCall<{ competency: MoodleCompetency }[]>("core_competency_list_course_competencies", { id: courseId });
+    return (r || []).map((x) => x.competency);
+  },
+
+  /** Estado de una competencia para un usuario en un curso. */
+  userCompetencyInCourse: async (courseId: number, competencyId: number, moodleUserId: number) => {
+    const r = await moodleCall<{ usercompetency?: { proficiency?: boolean | null; grade?: number | null } }>(
+      "core_competency_get_user_competency_in_course",
+      { courseid: courseId, competencyid: competencyId, userid: moodleUserId }
+    );
+    return r.usercompetency ?? null;
+  },
+
+  /** Finalización oficial del curso para un usuario. */
+  courseCompletion: async (courseId: number, moodleUserId: number) => {
+    const r = await moodleCall<{ completionstatus: { completed: boolean; timecompleted?: number | null } }>(
+      "core_completion_get_course_completion_status",
+      { courseid: courseId, userid: moodleUserId }
+    );
+    return r.completionstatus;
+  },
+
   completion: async (courseId: number, moodleUserId: number) => {
     const r = await moodleCall<{ statuses: MoodleCompletionStatus[] }>(
       "core_completion_get_activities_completion_status",
@@ -222,10 +269,18 @@ export const moodle = {
 export async function moodleDownload(fileurl: string): Promise<{ buffer: Buffer; contentType: string }> {
   const token = env("MOODLE_WS_TOKEN");
   const sep = fileurl.includes("?") ? "&" : "?";
-  const res = await fetch(`${fileurl}${sep}token=${encodeURIComponent(token)}`, { cache: "no-store" });
-  if (!res.ok) throw new MoodleError(`No se pudo descargar el archivo (HTTP ${res.status})`);
+  const res = await fetch(`${fileurl}${sep}token=${encodeURIComponent(token)}`, { cache: "no-store", redirect: "follow" });
+  const contentType = res.headers.get("content-type") || "";
   const ab = await res.arrayBuffer();
-  return { buffer: Buffer.from(ab), contentType: res.headers.get("content-type") || "" };
+  const buffer = Buffer.from(ab);
+  if (!res.ok) throw new MoodleError(`No se pudo descargar el archivo (HTTP ${res.status}): ${buffer.toString("utf8").slice(0, 160)}`);
+  // Moodle devuelve HTML o JSON cuando el token no puede acceder al archivo
+  const head = buffer.subarray(0, 300).toString("utf8").trim();
+  if (/^(<!DOCTYPE|<html|\{"exception")/i.test(head) || (/text\/html|application\/json/i.test(contentType) && !/pdf|word|text\/plain/i.test(fileurl))) {
+    const msg = head.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 200);
+    throw new MoodleError(`Moodle no entregó el archivo (respondió ${contentType || "sin tipo"}): ${msg}`);
+  }
+  return { buffer, contentType };
 }
 
 /** Base pública de Moodle (para armar enlaces "Abrir en Moodle"). */

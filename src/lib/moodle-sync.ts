@@ -12,6 +12,7 @@
 import { prisma } from "@/lib/prisma";
 import { Role } from "@prisma/client";
 import { registerModuleDocuments, pruneCourseDocuments, indexPendingDocuments } from "@/lib/library";
+import { syncUserBadges, syncUserCourseMicrocredential } from "@/lib/credentials";
 import {
   moodle,
   moodleBaseUrl,
@@ -37,6 +38,10 @@ export interface SyncReport {
   errors: string[];
   startedAt: string;
   finishedAt?: string;
+}
+
+function warnOnce(report: SyncReport, msg: string) {
+  if (!report.errors.includes(msg)) report.errors.push(msg);
 }
 
 function newReport(): SyncReport {
@@ -268,6 +273,8 @@ async function syncCourseParticipants(
         const items = await moodle.gradeItems(mc.id, mu.id).catch(() => [] as MoodleGradeItem[]);
         await syncGrades(enrollment.id, items, report);
         await syncCalendarForUser(local.id, courseName, savedAssignments);
+        await syncUserCourseMicrocredential(local.id, mu.id, { id: courseId, name: courseName, moodleCourseId: mc.id }, enrollment.progressPercent, (m) => warnOnce(report, m)).catch((e) => warnOnce(report, `Microcredencial ${courseName}: ${e.message}`));
+        await syncUserBadges(local.id, mu.id, (m) => warnOnce(report, m)).catch((e) => warnOnce(report, `Insignias ${mu.fullname}: ${e.message}`));
       }
     } catch (e: any) {
       report.errors.push(`Usuario ${mu.fullname} en ${mc.fullname}: ${e.message}`);
@@ -344,12 +351,14 @@ export async function syncUser(userId: string): Promise<SyncReport> {
       } else {
         await syncGrades(enrollment.id, gradeItems, report);
         await syncCalendarForUser(userId, course.name, saved);
+        await syncUserCourseMicrocredential(userId, mid, { id: course.id, name: course.name, moodleCourseId: mc.id }, enrollment.progressPercent, (m) => warnOnce(report, m)).catch((e) => warnOnce(report, `Microcredencial ${course.name}: ${e.message}`));
       }
     } catch (e: any) {
       report.errors.push(`Curso ${mc.fullname}: ${e.message}`);
     }
   }
 
+  await syncUserBadges(userId, mid, (m) => warnOnce(report, m)).catch((e) => warnOnce(report, `Insignias: ${e.message}`));
   await indexDocuments(report, 10);
   report.finishedAt = new Date().toISOString();
   return report;

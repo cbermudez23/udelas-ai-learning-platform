@@ -1,14 +1,17 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Award, Check } from "lucide-react";
+import { Award, Check, ExternalLink } from "lucide-react";
+
+export const dynamic = "force-dynamic";
 
 export default async function MicrocredencialesPage() {
   const session = await getServerSession(authOptions);
+  // Microcredenciales de los cursos del usuario (Moodle) + las institucionales sin curso
   const microcredentials = await prisma.microcredential.findMany({
-    include: {
-      progress: { where: { userId: session!.user.id } }
-    }
+    where: { OR: [{ courseId: null }, { course: { enrollments: { some: { userId: session!.user.id } } } }] },
+    include: { progress: { where: { userId: session!.user.id } } },
+    orderBy: { name: "asc" }
   });
 
   return (
@@ -21,8 +24,17 @@ export default async function MicrocredencialesPage() {
         const currentStep = mc.progress[0]?.currentStep ?? 0;
         return (
           <div key={mc.id} className="card">
-            <div className="text-[13px] font-medium">{mc.name}</div>
-            <div className="text-[11px] text-[var(--text-tertiary)] mb-3">{mc.description}</div>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="text-[13px] font-medium flex items-center gap-2">
+                  {mc.name}
+                  {mc.source === "MOODLE" && <span className="text-[10px] font-medium text-[#B45309] bg-[#FDF3E3] px-2 py-0.5 rounded-full">Moodle</span>}
+                  {mc.progress[0]?.earnedAt && <span className="text-[10px] font-medium text-[#166534] bg-[#E4F5EC] px-2 py-0.5 rounded-full">Obtenida · {mc.progress[0].earnedAt.toLocaleDateString("es-PA")}</span>}
+                </div>
+                <div className="text-[11px] text-[var(--text-tertiary)] mb-3">{mc.description} · {currentStep}/{steps.length} pasos</div>
+              </div>
+              {mc.moodleUrl && <a href={mc.moodleUrl} target="_blank" rel="noreferrer" className="text-[10px] text-[var(--clr-brand2)] inline-flex items-center gap-1 hover:underline shrink-0">Ver en Moodle <ExternalLink className="w-3 h-3" /></a>}
+            </div>
             <div className="flex items-center overflow-x-auto gap-0 py-2">
               {steps.map((s, i) => (
                 <div key={i} className="flex items-center">
@@ -53,7 +65,7 @@ export default async function MicrocredencialesPage() {
       })}
       {microcredentials.length === 0 && (
         <div className="text-[12px] text-[var(--text-tertiary)]">
-          No hay microcredenciales configuradas todavía.
+          Aún no tienes microcredenciales. Se generan automáticamente a partir de las competencias o la finalización de tus cursos en Moodle.
         </div>
       )}
     </div>

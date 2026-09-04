@@ -82,6 +82,8 @@ model Course {
   contents    CourseContent[]
   assignments Assignment[]
   documents   LibraryDocument[]
+  microcredentials Microcredential[]
+  badges      Badge[]
 }
 
 // Un recurso o actividad dentro de un curso de Moodle (archivo, página, foro, tarea, cuestionario...)
@@ -253,7 +255,14 @@ model Microcredential {
   description String
   steps       Json   // { label: string }[]
 
+  // ---- Origen Moodle ----
+  source         String @default("LOCAL") // LOCAL | MOODLE
+  moodleCourseId Int?   @unique
+  courseId       String?
+  moodleUrl      String?
+
   progress UserMicrocredentialProgress[]
+  course   Course? @relation(fields: [courseId], references: [id], onDelete: Cascade)
 }
 
 model UserMicrocredentialProgress {
@@ -261,6 +270,7 @@ model UserMicrocredentialProgress {
   userId            String
   microcredentialId String
   currentStep       Int    @default(0)
+  earnedAt          DateTime?
 
   user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   microcredential Microcredential @relation(fields: [microcredentialId], references: [id], onDelete: Cascade)
@@ -274,7 +284,15 @@ model Badge {
   description String
   icon        String
 
-  users UserBadge[]
+  // ---- Origen Moodle ----
+  source        String  @default("LOCAL") // LOCAL | MOODLE
+  moodleBadgeId Int?    @unique
+  imageUrl      String?
+  issuer        String?
+  courseId      String?
+
+  users  UserBadge[]
+  course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
 }
 
 model UserBadge {
