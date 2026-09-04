@@ -117,10 +117,23 @@ export async function POST(req: NextRequest) {
 function safeDestination(targetLinkUri: string): string {
   try {
     const url = new URL(targetLinkUri);
+    // Si Moodle apunta a una ruta técnica de LTI (o a la raíz), llevamos al
+    // usuario al Dashboard; en cualquier otro caso respetamos la ruta indicada.
+    if (url.pathname.startsWith("/api/") || url.pathname === "/" || url.pathname === "") {
+      return "/dashboard";
+    }
     return url.pathname + url.search;
   } catch {
     return "/dashboard";
   }
+}
+
+/**
+ * Si alguien abre esta ruta directamente con GET (por ejemplo, recargando la
+ * página), lo llevamos al Dashboard en lugar de mostrar un error 405.
+ */
+export async function GET() {
+  return NextResponse.redirect(new URL("/dashboard", process.env.NEXTAUTH_URL), 302);
 }
 
 function htmlError(message: string) {
