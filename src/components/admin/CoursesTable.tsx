@@ -14,6 +14,21 @@ export default function CoursesTable({ courses }: { courses: Row[] }) {
   const [msg, setMsg] = useState<string | null>(null);
   const localCount = courses.filter((c) => c.source !== "MOODLE").length;
 
+  async function cleanAllDemo() {
+    if (!confirm("Se eliminará TODA la información de demostración:\n\n• Cursos locales/demo (con matrículas, notas y exámenes)\n• Usuarios que no vienen de Moodle (excepto administradores)\n• Eventos de calendario, portafolio, documentos demo de la Biblioteca IA\n• Catálogo demo de microcredenciales e insignias\n\nLo sincronizado desde Moodle se conserva. ¿Continuar?")) return;
+    setBusy("demo"); setMsg(null);
+    try {
+      const res = await fetch("/api/admin/demo", { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) setMsg(data.error || "Error");
+      else {
+        const d = data.deleted;
+        setMsg(`Limpieza completa: ${d.cursos} curso(s), ${d.usuarios} usuario(s), ${d.eventos} evento(s), ${d.biblioteca} documento(s), ${d.microcredenciales} microcredencial(es), ${d.insignias} insignia(s).`);
+        router.refresh();
+      }
+    } catch (e: any) { setMsg(e.message); } finally { setBusy(null); }
+  }
+
   async function del(body: any, okMsg: string, key: string) {
     setBusy(key); setMsg(null);
     try {
@@ -37,6 +52,13 @@ export default function CoursesTable({ courses }: { courses: Row[] }) {
               Eliminar cursos demo ({localCount})
             </button>
           )}
+          <button
+            onClick={cleanAllDemo}
+            disabled={busy !== null}
+            className="text-[11px] px-2.5 py-1.5 rounded-md bg-[#B91C1C] text-white hover:opacity-90 disabled:opacity-50"
+          >
+            Eliminar toda la info demo
+          </button>
           <MoodleSyncButton scope="all" label="Sincronizar todo Moodle" />
         </div>
       </div>
