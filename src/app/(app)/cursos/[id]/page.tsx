@@ -63,10 +63,10 @@ export default async function CursoDetallePage({ params }: { params: { id: strin
   const now = new Date();
 
   // Agrupar contenidos por sección (respetando el orden de Moodle)
-  const sections: { name: string; items: typeof course.contents }[] = [];
+  const sections: { order: number; name: string; items: typeof course.contents }[] = [];
   for (const c of course.contents) {
-    let s = sections.find((x) => x.name === c.sectionName);
-    if (!s) { s = { name: c.sectionName, items: [] }; sections.push(s); }
+    let s = sections.find((x) => x.order === c.sectionOrder);
+    if (!s) { s = { order: c.sectionOrder, name: c.sectionName, items: [] }; sections.push(s); }
     s.items.push(c);
   }
 
@@ -124,7 +124,7 @@ export default async function CursoDetallePage({ params }: { params: { id: strin
             <div className="card text-[11px] text-[var(--text-tertiary)]">Este curso aún no tiene contenidos sincronizados.</div>
           )}
           {sections.map((s) => (
-            <div key={s.name} className="card">
+            <div key={s.order} className="card">
               <div className="text-[12px] font-semibold mb-2">{s.name}</div>
               <ul className="space-y-1.5">
                 {s.items.map((c) =>

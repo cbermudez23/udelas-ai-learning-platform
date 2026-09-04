@@ -28,7 +28,7 @@ export default async function AppLayout({
     <div className="h-screen flex flex-col overflow-hidden">
       <Header avatarInitials={session.user.avatarInitials} />
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar userName={session.user.name || "Usuario"} progress={avgProgress} />
+        <Sidebar userName={session.user.name || "Usuario"} progress={avgProgress} role={session.user.role} />
         <main className="flex-1 overflow-y-auto p-4 bg-[var(--bg-tertiary)]">
           {children}
         </main>

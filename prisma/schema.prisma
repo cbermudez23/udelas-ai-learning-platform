@@ -267,3 +267,22 @@ model PortfolioItem {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+// Configuración editable desde el panel de administración (clave/valor)
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// Historial de sincronizaciones con Moodle
+model SyncRun {
+  id          String    @id @default(cuid())
+  scope       String    // me | all
+  triggeredBy String?   // correo del usuario o "cron"
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+  ok          Boolean   @default(false)
+  summary     String?   // resumen legible
+  errors      String?   @db.Text
+}

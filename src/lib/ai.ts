@@ -21,10 +21,12 @@ export interface ChatTurn {
 
 export class AIConfigError extends Error {}
 
-const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-5";
-const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
+import { getSettings, type AppSettings } from "@/lib/settings";
 
-function getProvider(): "anthropic" | "openai" {
+function getProvider(settings: AppSettings): "anthropic" | "openai" {
+  const pref = settings.aiProvider;
+  if (pref === "anthropic" && process.env.ANTHROPIC_API_KEY) return "anthropic";
+  if (pref === "openai" && process.env.OPENAI_API_KEY) return "openai";
   if (process.env.ANTHROPIC_API_KEY) return "anthropic";
   if (process.env.OPENAI_API_KEY) return "openai";
   throw new AIConfigError(
@@ -36,9 +38,12 @@ export async function generateChatCompletion(
   turns: ChatTurn[],
   opts: { maxTokens?: number; temperature?: number } = {}
 ): Promise<string> {
-  const provider = getProvider();
-  const maxTokens = opts.maxTokens ?? 1024;
-  const temperature = opts.temperature ?? 0.4;
+  const settings = await getSettings();
+  const provider = getProvider(settings);
+  const maxTokens = opts.maxTokens ?? settings.maxTokens ?? 1024;
+  const temperature = opts.temperature ?? settings.temperature ?? 0.4;
+  const ANTHROPIC_MODEL = settings.anthropicModel;
+  const OPENAI_MODEL = settings.openaiModel;
 
   if (provider === "anthropic") {
     const system = turns.find((t) => t.role === "system")?.content;

@@ -97,6 +97,14 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // 3a. Promoción automática a ADMIN si el correo está en ADMIN_EMAILS
+    {
+      const { adminEmails } = await import("@/lib/settings");
+      if (user.role !== Role.ADMIN && adminEmails().includes(user.email.toLowerCase())) {
+        user = await prisma.user.update({ where: { id: user.id }, data: { role: Role.ADMIN } });
+      }
+    }
+
     // 3b. Sincronizamos sus cursos/notas desde Moodle (si falla, no bloquea el ingreso)
     try {
       const { syncUser } = await import("@/lib/moodle-sync");

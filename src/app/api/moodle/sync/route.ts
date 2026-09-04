@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Solo un administrador puede sincronizar todo Moodle." }, { status: 403 });
       }
       const report = await syncAll();
+      await logRun("all", session?.user?.email || "cron", report);
       return NextResponse.json({ ok: report.errors.length === 0, scope, report });
     }
 
@@ -38,10 +39,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
     const report = await syncUser(session.user.id);
+    await logRun("me", session.user.email || session.user.id, report);
     return NextResponse.json({ ok: report.errors.length === 0, scope, report });
   } catch (e: any) {
     console.error("Error en sincronización Moodle:", e);
     return NextResponse.json({ error: e.message || "Error al sincronizar con Moodle" }, { status: 500 });
+  }
+}
+
+async function logRun(scope: string, triggeredBy: string, r: Awaited<ReturnType<typeof syncAll>>) {
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    await prisma.syncRun.create({
+      data: {
+        scope,
+        triggeredBy,
+        startedAt: new Date(r.startedAt),
+        finishedAt: r.finishedAt ? new Date(r.finishedAt) : new Date(),
+        ok: r.errors.length === 0,
+        summary: `${r.courses} curso(s), ${r.enrollments} matrícula(s), ${r.contents} contenido(s), ${r.assignments} tarea(s), ${r.grades} nota(s), ${r.users} usuario(s) nuevo(s)`,
+        errors: r.errors.length ? r.errors.join("\n") : null
+      }
+    });
+  } catch (e) {
+    console.warn("No se pudo registrar la sincronización:", e);
   }
 }
 

@@ -14,7 +14,8 @@ import {
   Award,
   Briefcase,
   BadgeCheck,
-  LineChart
+  LineChart,
+  ShieldCheck
 } from "lucide-react";
 
 const sections: {
@@ -52,12 +53,24 @@ const sections: {
 
 export default function Sidebar({
   userName,
-  progress
+  progress,
+  role
 }: {
   userName: string;
   progress: number;
+  role?: string;
 }) {
   const pathname = usePathname();
+  const visibleSections =
+    role === "ADMIN"
+      ? [
+          ...sections,
+          {
+            label: "Administración",
+            items: [{ href: "/admin", icon: ShieldCheck, label: "Panel de administración" }]
+          }
+        ]
+      : sections;
 
   return (
     <aside className="w-[220px] shrink-0 bg-white border-r border-[var(--border-tertiary)] flex flex-col overflow-y-auto">
@@ -77,7 +90,7 @@ export default function Sidebar({
         </div>
       </div>
 
-      {sections.map((section) => (
+      {visibleSections.map((section) => (
         <div key={section.label}>
           <div className="px-3 pt-3 pb-1 text-[10px] font-medium uppercase tracking-wide text-[var(--text-tertiary)]">
             {section.label}

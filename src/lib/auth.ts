@@ -18,13 +18,19 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        const user = await prisma.user.findUnique({
+        let user = await prisma.user.findUnique({
           where: { email: credentials.email.toLowerCase().trim() }
         });
         if (!user) return null;
 
         const valid = await bcrypt.compare(credentials.password, user.passwordHash);
         if (!valid) return null;
+
+        // Promoción automática a ADMIN si el correo está en ADMIN_EMAILS
+        const { adminEmails } = await import("@/lib/settings");
+        if (user.role !== "ADMIN" && adminEmails().includes(user.email.toLowerCase())) {
+          user = await prisma.user.update({ where: { id: user.id }, data: { role: "ADMIN" } });
+        }
 
         return {
           id: user.id,

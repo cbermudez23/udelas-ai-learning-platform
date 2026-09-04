@@ -45,6 +45,24 @@ export async function POST(req: NextRequest) {
 
   const userId = session.user.id;
 
+  // Reglas del panel de administración (IA apagada / límite diario)
+  const { getSettings } = await import("@/lib/settings");
+  const settings = await getSettings();
+  if (!settings.aiEnabled) {
+    return NextResponse.json({ error: settings.disabledMessage }, { status: 503 });
+  }
+  if (settings.dailyMessageLimit > 0) {
+    const since = new Date();
+    since.setHours(0, 0, 0, 0);
+    const used = await prisma.chatMessage.count({ where: { userId, role: "user", createdAt: { gte: since } } });
+    if (used >= settings.dailyMessageLimit) {
+      return NextResponse.json(
+        { error: `Has alcanzado el límite de ${settings.dailyMessageLimit} mensajes por día. Vuelve mañana.` },
+        { status: 429 }
+      );
+    }
+  }
+
   // Contexto académico del estudiante (RAG básico institucional: datos propios del usuario)
   const enrollments = await prisma.enrollment.findMany({
     where: { userId },
@@ -102,7 +120,7 @@ export async function POST(req: NextRequest) {
   ];
 
   try {
-    const reply = await generateChatCompletion(turns, { maxTokens: 800 });
+    const reply = await generateChatCompletion(turns, { maxTokens: settings.maxTokens });
 
     await prisma.chatMessage.createMany({
       data: [
