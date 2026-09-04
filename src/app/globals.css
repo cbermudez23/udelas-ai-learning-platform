@@ -57,3 +57,21 @@ body {
 .prog-fill.amber { background: var(--clr-accent); }
 .prog-fill.green { background: #22a05b; }
 .prog-fill.red { background: #c84040; }
+
+/* Markdown dentro de las respuestas del Tutor IA y los Agentes */
+.chat-md > :first-child { margin-top: 0; }
+.chat-md > :last-child { margin-bottom: 0; }
+.chat-md p { margin: 0 0 0.5em; }
+.chat-md h1, .chat-md h2, .chat-md h3, .chat-md h4 { font-weight: 600; margin: 0.6em 0 0.3em; font-size: 12.5px; }
+.chat-md h1 { font-size: 13.5px; }
+.chat-md ul, .chat-md ol { margin: 0.2em 0 0.5em 1.2em; }
+.chat-md ul { list-style: disc; }
+.chat-md ol { list-style: decimal; }
+.chat-md li { margin: 0.15em 0; }
+.chat-md strong { font-weight: 600; }
+.chat-md hr { border: 0; border-top: 1px solid var(--border-tertiary); margin: 0.6em 0; }
+.chat-md code { background: #F3F4F6; padding: 0 3px; border-radius: 3px; font-size: 11px; }
+.chat-md pre { background: #F3F4F6; padding: 8px; border-radius: 6px; overflow-x: auto; font-size: 11px; }
+.chat-md table { border-collapse: collapse; margin: 0.4em 0; font-size: 11px; }
+.chat-md th, .chat-md td { border: 1px solid var(--border-tertiary); padding: 3px 6px; }
+.chat-md blockquote { border-left: 3px solid var(--border-secondary); padding-left: 8px; color: var(--text-secondary); margin: 0.4em 0; }

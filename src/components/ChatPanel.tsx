@@ -1,4 +1,6 @@
 "use client";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 import { useEffect, useRef, useState } from "react";
 import { Sparkles, Send, Loader2 } from "lucide-react";
@@ -97,13 +99,13 @@ export default function ChatPanel({
         {messages.map((m, i) => (
           <div
             key={i}
-            className={`max-w-[88%] px-3 py-2 rounded-lg text-[12px] leading-relaxed whitespace-pre-wrap ${
+            className={`max-w-[88%] px-3 py-2 rounded-lg text-[12px] leading-relaxed ${
               m.role === "user"
-                ? "bg-[var(--clr-brand2)] text-white self-end rounded-br-sm"
-                : "bg-white border border-[var(--border-tertiary)] self-start rounded-bl-sm"
+                ? "bg-[var(--clr-brand2)] text-white self-end rounded-br-sm whitespace-pre-wrap"
+                : "bg-white border border-[var(--border-tertiary)] self-start rounded-bl-sm chat-md"
             }`}
           >
-            {m.content}
+            {m.role === "user" ? m.content : <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>}
           </div>
         ))}
         {loading && (
