@@ -32,6 +32,7 @@ model User {
   passwordHash String
   role         Role     @default(STUDENT)
   avatarInitials String @default("UD")
+  moodleUserId Int?     @unique   // id del usuario en Moodle (para sincronizar)
   createdAt    DateTime @default(now())
 
   enrollments        Enrollment[]
@@ -68,8 +69,48 @@ model Course {
   icon          String   @default("book")
   createdAt     DateTime @default(now())
 
+  // ---- Sincronización con Moodle ----
+  source         String    @default("LOCAL") // LOCAL | MOODLE
+  moodleCourseId Int?      @unique
+  shortName      String?
+  summary        String?
+  moodleUrl      String?
+  lastSyncedAt   DateTime?
+
   enrollments Enrollment[]
   exams       Exam[]
+  contents    CourseContent[]
+  assignments Assignment[]
+}
+
+// Un recurso o actividad dentro de un curso de Moodle (archivo, página, foro, tarea, cuestionario...)
+model CourseContent {
+  id             String  @id @default(cuid())
+  courseId       String
+  moodleModuleId Int     @unique
+  sectionName    String
+  sectionOrder   Int     @default(0)
+  order          Int     @default(0)
+  name           String
+  modName        String  // resource, page, url, forum, assign, quiz, label, folder...
+  url            String?
+  description    String?
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+}
+
+// Tarea de Moodle (con fecha de entrega) dentro de un curso
+model Assignment {
+  id             String    @id @default(cuid())
+  courseId       String
+  moodleAssignId Int       @unique
+  name           String
+  intro          String?
+  dueDate        DateTime?
+  openDate       DateTime?
+  url            String?
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 }
 
 model Enrollment {
@@ -77,6 +118,7 @@ model Enrollment {
   userId          String
   courseId        String
   progressPercent Int      @default(0)
+  roleInCourse    String   @default("student") // student | teacher
   createdAt       DateTime @default(now())
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -90,10 +132,15 @@ model Grade {
   id           String   @id @default(cuid())
   enrollmentId String
   label        String   // Parcial 1, Parcial 2, Final
-  score        Float
+  score        Float    // porcentaje 0-100
+  rawScore     Float?   // nota tal cual en Moodle
+  maxScore     Float?
+  moodleItemId Int?
   createdAt    DateTime @default(now())
 
   enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, moodleItemId])
 }
 
 model CalendarEvent {
@@ -103,9 +150,12 @@ model CalendarEvent {
   detail    String?
   date      DateTime
   colorTag  String   @default("blue")
+  moodleKey String?  // ej. "assign:12" para no duplicar al sincronizar
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, moodleKey])
 }
 
 model ChatMessage {

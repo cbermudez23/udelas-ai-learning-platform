@@ -48,17 +48,44 @@ export async function POST(req: NextRequest) {
   // Contexto académico del estudiante (RAG básico institucional: datos propios del usuario)
   const enrollments = await prisma.enrollment.findMany({
     where: { userId },
-    include: { course: true, grades: true }
+    include: {
+      course: {
+        include: {
+          contents: { orderBy: [{ sectionOrder: "asc" }, { order: "asc" }] },
+          assignments: { orderBy: { dueDate: "asc" } }
+        }
+      },
+      grades: true
+    }
   });
 
+  const now = new Date();
   const contextLines = enrollments.map((e) => {
-    const grades = e.grades.map((g) => `${g.label}: ${g.score}`).join(", ") || "sin notas aún";
-    return `- ${e.course.name} (${e.course.professorName}): ${e.progressPercent}% completado. Notas: ${grades}`;
+    const grades =
+      e.grades.map((g) => `${g.label}: ${g.score}%${g.maxScore ? ` (${g.rawScore}/${g.maxScore})` : ""}`).join(", ") ||
+      "sin notas aún";
+    const topics = e.course.contents
+      .filter((c) => !["label", "forum"].includes(c.modName))
+      .map((c) => `${c.name} [${c.modName}]`)
+      .slice(0, 40)
+      .join("; ");
+    const pending = e.course.assignments
+      .filter((a) => a.dueDate && a.dueDate > now)
+      .map((a) => `${a.name} (vence ${a.dueDate!.toLocaleDateString("es-PA")})`)
+      .join(", ");
+    const src = e.course.source === "MOODLE" ? "Moodle" : "Plataforma";
+    return [
+      `- ${e.course.name} (${e.course.professorName}) [${src}]: ${e.progressPercent}% completado. Notas: ${grades}`,
+      topics ? `  Contenidos: ${topics}` : "",
+      pending ? `  Tareas pendientes: ${pending}` : ""
+    ]
+      .filter(Boolean)
+      .join("\n");
   });
 
   const academicContext =
     contextLines.length > 0
-      ? `Contexto académico de ${session.user.name}:\n${contextLines.join("\n")}`
+      ? `Contexto académico de ${session.user.name} (fecha actual: ${now.toLocaleDateString("es-PA")}):\n${contextLines.join("\n")}`
       : `El estudiante ${session.user.name} aún no tiene cursos matriculados en el sistema.`;
 
   // Historial reciente de la conversación (por tipo de agente)

@@ -6,11 +6,11 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("Sembrando datos de demostración de UDELAS AI Learning Platform...");
 
-  const passwordHash = await bcrypt.hash("demo1234", 10);
+  const passwordHash = await bcrypt.hash(process.env.DEMO_PASSWORD || "Demo1234*", 10);
 
   const student = await prisma.user.upsert({
     where: { email: "carlos@udelas.ac.pa" },
-    update: {},
+    update: { passwordHash },
     create: {
       name: "Carlos Alvarado",
       email: "carlos@udelas.ac.pa",
@@ -22,7 +22,7 @@ async function main() {
 
   await prisma.user.upsert({
     where: { email: "profesora@udelas.ac.pa" },
-    update: {},
+    update: { passwordHash },
     create: {
       name: "Dra. María Torres",
       email: "profesora@udelas.ac.pa",

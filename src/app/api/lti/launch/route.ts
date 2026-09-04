@@ -97,6 +97,15 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // 3b. Sincronizamos sus cursos/notas desde Moodle (si falla, no bloquea el ingreso)
+    try {
+      const { syncUser } = await import("@/lib/moodle-sync");
+      const r = await syncUser(user.id);
+      if (r.errors.length) console.warn("Sincronización Moodle (LTI) con avisos:", r.errors);
+    } catch (e) {
+      console.warn("No se pudo sincronizar con Moodle al entrar por LTI:", e);
+    }
+
     // 4. Creamos la sesión (igual que si hubiera iniciado sesión con usuario/contraseña)
     const secureCookie = (process.env.NEXTAUTH_URL || "").startsWith("https://");
     const token = await encode({
