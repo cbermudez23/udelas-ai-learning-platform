@@ -1,0 +1,27 @@
+name: Sincronizar con Moodle
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Llamar al endpoint de sincronización
+        run: |
+          set -e
+          HTTP=$(curl -s -o /tmp/resp.json -w "%{http_code}" \
+            -X POST "${{ secrets.PLATFORM_URL }}/api/moodle/sync" \
+            -H "Content-Type: application/json" \
+            -H "x-sync-secret: ${{ secrets.MOODLE_SYNC_SECRET }}" \
+            --max-time 300 \
+            -d '{"scope":"all"}')
+          echo "HTTP $HTTP"
+          cat /tmp/resp.json
+          echo
+          if [ "$HTTP" != "200" ]; then
+            echo "::error::La sincronización falló (HTTP $HTTP)"
+            exit 1
+          fi
