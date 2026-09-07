@@ -34,6 +34,7 @@ model User {
   avatarInitials String @default("UD")
   moodleUserId Int?     @unique   // id del usuario en Moodle (para sincronizar)
   exports      ExportFile[]
+  examsCreated Exam[]
   createdAt    DateTime @default(now())
 
   enrollments        Enrollment[]
@@ -177,14 +178,17 @@ model ChatMessage {
 }
 
 model Exam {
-  id          String   @id @default(cuid())
-  title       String
-  topic       String
-  courseId    String?
-  createdByAI Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  id            String   @id @default(cuid())
+  title         String
+  topic         String
+  courseId      String?
+  createdById   String?
+  createdByAI   Boolean  @default(true)
+  materialsUsed Int      @default(0) // fragmentos de la Biblioteca IA usados como base (0 = conocimiento general)
+  createdAt     DateTime @default(now())
 
   course    Course?        @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  createdBy User?          @relation(fields: [createdById], references: [id], onDelete: SetNull)
   questions ExamQuestion[]
   attempts  ExamAttempt[]
 }

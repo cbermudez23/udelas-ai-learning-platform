@@ -35,7 +35,7 @@ export default async function BadgesPage() {
               <div className="w-[64px] h-[64px] rounded-full flex items-center justify-center text-xl mx-auto mb-1.5 bg-[#FDF3E3] overflow-hidden">
                 {e.badge.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={e.badge.imageUrl} alt={e.badge.name} className="w-full h-full object-cover" />
+                  <img src={`/api/badges/${e.badge.id}/image`} alt={e.badge.name} className="w-full h-full object-cover" />
                 ) : e.badge.source === "MOODLE" ? (
                   <Award className="w-7 h-7 text-[#B45309]" />
                 ) : (
