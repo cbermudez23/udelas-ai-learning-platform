@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(await file.arrayBuffer());
   let text = "";
   try {
-    text = (await extractText(buffer, file.name, file.type)).trim();
+    text = (await extractText(buffer, file.name, file.type)).text.trim();
   } catch (e: any) {
     return NextResponse.json({ error: `No se pudo extraer el texto: ${e.message}` }, { status: 400 });
   }

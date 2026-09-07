@@ -121,21 +121,29 @@ export async function pruneCourseDocuments(courseId: string, keepModuleIds: numb
 // Extracción e indexado
 // ---------------------------------------------------------------------------
 
-export async function extractText(buffer: Buffer, filename: string, mime?: string | null): Promise<string> {
+export const MIN_PDF_TEXT_CHARS = 40; // por debajo de esto, se asume PDF escaneado y se intenta OCR
+
+export async function extractText(buffer: Buffer, filename: string, mime?: string | null): Promise<{ text: string; ocr?: { pagesProcessed: number; truncated: boolean } }> {
   const ext = extOf(filename);
   if (ext === "pdf" || mime === "application/pdf") {
     const { extractText: pdfExtract, getDocumentProxy } = await import("unpdf");
     const pdf = await getDocumentProxy(new Uint8Array(buffer));
     const r = await pdfExtract(pdf, { mergePages: true });
-    return String(r.text || "");
+    const text = String(r.text || "").trim();
+    if (text.length >= MIN_PDF_TEXT_CHARS) return { text };
+
+    // Probablemente un PDF escaneado (sin capa de texto o casi vacía): OCR en español
+    const { ocrPdfBuffer } = await import("@/lib/ocr");
+    const ocr = await ocrPdfBuffer(buffer);
+    return { text: ocr.text, ocr: { pagesProcessed: ocr.pagesProcessed, truncated: ocr.truncated } };
   }
   if (ext === "docx") {
     const mammoth = await import("mammoth");
     const r = await mammoth.extractRawText({ buffer });
-    return r.value || "";
+    return { text: r.value || "" };
   }
-  if (ext === "html" || ext === "htm") return stripHtml(buffer.toString("utf8"));
-  return buffer.toString("utf8");
+  if (ext === "html" || ext === "htm") return { text: stripHtml(buffer.toString("utf8")) };
+  return { text: buffer.toString("utf8") };
 }
 
 export function chunkText(text: string): string[] {
@@ -178,10 +186,12 @@ export async function indexPendingDocuments(limit = 10): Promise<{ indexed: numb
   for (const d of pending) {
     try {
       const { buffer } = await moodleDownload(d.moodleFileUrl!);
-      const text = (await extractText(buffer, d.moodleFileName || d.title, d.mimeType)).trim();
-      if (!text) throw new Error("El archivo no contiene texto extraíble (¿es un PDF escaneado?)");
+      const { text: raw, ocr } = await extractText(buffer, d.moodleFileName || d.title, d.mimeType);
+      const text = raw.trim();
+      if (!text) throw new Error("El archivo no contiene texto extraíble, incluso tras aplicar reconocimiento óptico (OCR).");
       const n = await replaceChunks(d.id, text);
-      await prisma.libraryDocument.update({ where: { id: d.id }, data: { content: text.slice(0, MAX_TEXT_CHARS), status: "indexed", indexedAt: new Date(), error: null } });
+      const ocrNote = ocr ? ` (texto reconocido por OCR, ${ocr.pagesProcessed} página(s)${ocr.truncated ? " — documento largo, solo se procesaron las primeras páginas" : ""})` : "";
+      await prisma.libraryDocument.update({ where: { id: d.id }, data: { content: text.slice(0, MAX_TEXT_CHARS), status: "indexed", indexedAt: new Date(), error: ocrNote ? ocrNote.trim() : null } });
       indexed++;
       if (n === 0) errors.push(`${d.title}: sin fragmentos útiles`);
     } catch (e: any) {
@@ -191,6 +201,8 @@ export async function indexPendingDocuments(limit = 10): Promise<{ indexed: numb
       await prisma.libraryDocument.update({ where: { id: d.id }, data: { status: "error", error: String(e.message).slice(0, 500) } });
     }
   }
+  const { terminateOcrWorker } = await import("@/lib/ocr");
+  await terminateOcrWorker();
   return { indexed, failed, errors };
 }
 

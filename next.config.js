@@ -5,7 +5,7 @@ const nextConfig = {
     ignoreDuringBuilds: true
   },
   experimental: {
-    serverComponentsExternalPackages: ["unpdf", "mammoth", "pdfkit", "docx"]
+    serverComponentsExternalPackages: ["unpdf", "mammoth", "pdfkit", "docx", "tesseract.js", "@napi-rs/canvas"]
   }
 };
 

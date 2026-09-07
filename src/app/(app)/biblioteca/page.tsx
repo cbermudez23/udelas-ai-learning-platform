@@ -1,4 +1,4 @@
-import { Library, ExternalLink, FileText, BookOpen, AlertCircle, Clock } from "lucide-react";
+import { Library, ExternalLink, FileText, BookOpen, AlertCircle, Clock, Sparkles } from "lucide-react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -65,6 +65,7 @@ export default async function BibliotecaPage() {
                     <span className="font-medium">{d.title}</span>
                     <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#EEF3FF] text-[var(--clr-brand2)]">{TYPE_LABEL[d.type] || d.type}</span>
                     {d.status === "indexed" && <span className="text-[10px] text-[var(--text-tertiary)]">{d._count.chunks} fragmento(s)</span>}
+                    {d.status === "indexed" && d.error && <span className="text-[10px] text-[#B45309] inline-flex items-center gap-1" title={d.error}><Sparkles className="w-3 h-3" /> Leído por OCR</span>}
                     {d.status === "pending" && <span className="text-[10px] text-[#B45309] inline-flex items-center gap-1"><Clock className="w-3 h-3" /> Pendiente de indexar</span>}
                     {d.status === "unsupported" && <span className="text-[10px] text-[var(--text-tertiary)] inline-flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Solo enlace (formato no indexable)</span>}
                     {d.status === "error" && <span className="text-[10px] text-[#B91C1C] inline-flex items-center gap-1" title={d.error || ""}><AlertCircle className="w-3 h-3" /> Error al indexar</span>}
