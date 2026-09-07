@@ -110,10 +110,10 @@ export default function CalendarGrid({ events }: { events: CalEvent[] }) {
                     {format(new Date(e.date), "MMM", { locale: es }).toUpperCase()}
                   </div>
                 </div>
-                <div>
-                  <div className="text-[11px] font-medium">{e.title}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[11px] font-medium truncate">{e.title}</div>
                   {e.detail && (
-                    <div className="text-[10px] text-[var(--text-tertiary)]">{e.detail}</div>
+                    <div className="text-[10px] text-[var(--text-tertiary)] truncate">{e.detail}</div>
                   )}
                 </div>
               </div>

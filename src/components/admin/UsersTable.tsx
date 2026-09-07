@@ -56,35 +56,50 @@ export default function UsersTable({ users, currentUserId }: { users: Row[]; cur
         <table className="w-full text-[11px]">
           <thead className="text-left text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">
             <tr>
-              <th className="px-3 py-2">Nombre</th><th className="px-3 py-2">Correo</th><th className="px-3 py-2">Rol</th>
-              <th className="px-3 py-2">Origen</th><th className="px-3 py-2 text-right">Cursos</th><th className="px-3 py-2 text-right">Mensajes IA</th>
+              <th className="px-3 py-2">Nombre</th>
+              <th className="px-3 py-2 hidden sm:table-cell">Correo</th>
+              <th className="px-3 py-2">Rol</th>
+              <th className="px-3 py-2 hidden md:table-cell">Origen</th>
+              <th className="px-3 py-2 text-right hidden md:table-cell">Cursos</th>
+              <th className="px-3 py-2 text-right hidden lg:table-cell">Mens. IA</th>
               <th className="px-3 py-2 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {list.map((u) => (
               <tr key={u.id} className="border-t border-[var(--border-tertiary)]">
-                <td className="px-3 py-2 font-medium">{u.name}{u.id === currentUserId && <span className="text-[var(--text-tertiary)]"> (tú)</span>}</td>
-                <td className="px-3 py-2 text-[var(--text-secondary)]">{u.email}</td>
+                <td className="px-3 py-2 font-medium max-w-[180px]">
+                  <div className="truncate">{u.name}{u.id === currentUserId && <span className="text-[var(--text-tertiary)]"> (tú)</span>}</div>
+                  {/* Subtexto con todos los datos extra, visible solo en móvil */}
+                  <div className="sm:hidden text-[10px] text-[var(--text-tertiary)] space-y-0.5 mt-0.5">
+                    <div className="truncate">{u.email}</div>
+                    <div className="flex flex-wrap gap-x-2">
+                      <span>{u.moodleUserId ? `Moodle #${u.moodleUserId}` : u.viaLti ? "LTI" : "Local"}</span>
+                      <span>{u.enrollments} curso(s)</span>
+                      <span>{u.messages} msj.</span>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-3 py-2 text-[var(--text-secondary)] hidden sm:table-cell max-w-[160px]"><div className="truncate">{u.email}</div></td>
                 <td className="px-3 py-2">
                   <select
                     value={u.role} disabled={busy === u.id || u.id === currentUserId}
                     onChange={(e) => changeRole(u, e.target.value)}
-                    className="border border-[var(--border-tertiary)] rounded px-1.5 py-0.5 bg-white text-[11px]"
+                    className="border border-[var(--border-tertiary)] rounded px-1.5 py-0.5 bg-white text-[11px] max-w-[110px]"
                   >
                     {Object.entries(ROLE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </td>
-                <td className="px-3 py-2">
+                <td className="px-3 py-2 hidden md:table-cell">
                   {u.moodleUserId ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#FDF3E3] text-[#B45309]">Moodle #{u.moodleUserId}</span>
                     : u.viaLti ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#FDF3E3] text-[#B45309]">LTI</span>
                     : <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#EEF3FF] text-[var(--clr-brand2)]">Local</span>}
                 </td>
-                <td className="px-3 py-2 text-right">{u.enrollments}</td>
-                <td className="px-3 py-2 text-right">{u.messages}</td>
+                <td className="px-3 py-2 text-right hidden md:table-cell">{u.enrollments}</td>
+                <td className="px-3 py-2 text-right hidden lg:table-cell">{u.messages}</td>
                 <td className="px-3 py-2 text-right whitespace-nowrap">
-                  <button onClick={() => resetPassword(u)} disabled={busy === u.id} className="text-[var(--clr-brand2)] hover:underline mr-3">Contraseña</button>
-                  <button onClick={() => remove(u)} disabled={busy === u.id || u.id === currentUserId} className="text-[#B91C1C] hover:underline disabled:opacity-40">Eliminar</button>
+                  <button onClick={() => resetPassword(u)} disabled={busy === u.id} className="text-[var(--clr-brand2)] hover:underline mr-2 whitespace-nowrap"><span className="hidden sm:inline">Contraseña</span><span className="sm:hidden">Clave</span></button>
+                  <button onClick={() => remove(u)} disabled={busy === u.id || u.id === currentUserId} className="text-[#B91C1C] hover:underline disabled:opacity-40 whitespace-nowrap">Eliminar</button>
                 </td>
               </tr>
             ))}
