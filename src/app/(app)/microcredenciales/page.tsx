@@ -8,9 +8,15 @@ export const dynamic = "force-dynamic";
 
 export default async function MicrocredencialesPage() {
   const session = await getServerSession(authOptions);
-  // Microcredenciales de los cursos del usuario (Moodle) + las institucionales sin curso
+  // Microcredenciales de los cursos donde el usuario es ESTUDIANTE (Moodle) + las institucionales sin curso.
+  // Un docente/administrador no "obtiene" la microcredencial de un curso que imparte.
   const microcredentials = await prisma.microcredential.findMany({
-    where: { OR: [{ courseId: null }, { course: { enrollments: { some: { userId: session!.user.id } } } }] },
+    where: {
+      OR: [
+        { courseId: null },
+        { course: { enrollments: { some: { userId: session!.user.id, roleInCourse: "student" } } } }
+      ]
+    },
     include: { progress: { where: { userId: session!.user.id } } },
     orderBy: { name: "asc" }
   });
