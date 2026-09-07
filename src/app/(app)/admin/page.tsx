@@ -4,6 +4,16 @@ import MoodleSyncButton from "@/components/MoodleSyncButton";
 
 export const dynamic = "force-dynamic";
 
+/** Funciones que el servicio "UDELAS IA" debe tener habilitadas en Moodle. */
+const EXPECTED_FUNCTIONS = [
+  "core_webservice_get_site_info", "core_course_get_courses", "core_course_get_courses_by_field", "core_course_get_categories",
+  "core_course_get_contents", "core_enrol_get_users_courses", "core_enrol_get_enrolled_users", "core_user_get_users_by_field",
+  "gradereport_user_get_grade_items", "mod_assign_get_assignments", "mod_forum_get_forums_by_courses",
+  "core_completion_get_activities_completion_status", "core_calendar_get_action_events_by_course",
+  "core_badges_get_user_badges", "core_completion_get_course_completion_status",
+  "core_competency_list_course_competencies", "tool_lp_data_for_user_competency_summary_in_course"
+];
+
 function Stat({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
     <div className="card">
@@ -30,11 +40,16 @@ export default async function AdminHome() {
       prisma.syncRun.findMany({ orderBy: { startedAt: "desc" }, take: 8 })
     ]);
 
+  let missing: string[] = [];
+  let downloadFiles = true;
   let moodleStatus: { ok: boolean; text: string } = { ok: false, text: "No configurado (faltan MOODLE_WS_URL / MOODLE_WS_TOKEN)" };
   if (moodleConfigured()) {
     try {
       const info = await moodle.siteInfo();
-      moodleStatus = { ok: true, text: `${info.sitename} · Moodle ${info.release} · ${(info.functions || []).length} funciones` };
+      const have = new Set<string>((info.functions || []).map((f: any) => f.name));
+      missing = EXPECTED_FUNCTIONS.filter((f) => !have.has(f));
+      downloadFiles = info.downloadfiles === 1;
+      moodleStatus = { ok: true, text: `${info.sitename} · Moodle ${info.release} · ${have.size} funciones${missing.length ? "" : " · todas las funciones requeridas están habilitadas"}` };
     } catch (e: any) {
       moodleStatus = { ok: false, text: `Sin respuesta: ${e.message}` };
     }
@@ -61,6 +76,13 @@ export default async function AdminHome() {
           </div>
           {moodleStatus.ok && <MoodleSyncButton scope="all" label="Sincronizar todo Moodle" />}
         </div>
+        {moodleStatus.ok && (missing.length > 0 || !downloadFiles) && (
+          <div className="mt-2 text-[11px] text-[#B45309] bg-[#FDF3E3] rounded-md px-3 py-2">
+            <div className="font-medium">Configuración incompleta en el servicio web "UDELAS IA" de Moodle:</div>
+            {missing.length > 0 && <div>Faltan funciones: {missing.join(", ")}</div>}
+            {!downloadFiles && <div>Falta marcar "Puede descargar archivos" (la Biblioteca IA no podrá indexar los archivos).</div>}
+          </div>
+        )}
         <div className="text-[10px] text-[var(--text-tertiary)] mt-2">
           "Sincronizar todo" recorre todos los cursos de Moodle, crea las cuentas de sus participantes (docentes y estudiantes) y actualiza contenidos, tareas y notas. Los usuarios individuales se sincronizan solos al entrar por LTI.
         </div>

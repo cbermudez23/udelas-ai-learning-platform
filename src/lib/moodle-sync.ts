@@ -12,12 +12,13 @@
 import { prisma } from "@/lib/prisma";
 import { Role } from "@prisma/client";
 import { registerModuleDocuments, pruneCourseDocuments, indexPendingDocuments } from "@/lib/library";
-import { syncUserBadges, syncUserCourseMicrocredential } from "@/lib/credentials";
+import { syncUserBadges, syncUserCourseMicrocredential, resetCredentialChecks } from "@/lib/credentials";
 import {
   moodle,
   moodleBaseUrl,
   moodleConfigured,
   type MoodleCourse,
+  type MoodleCategory,
   type MoodleSection,
   type MoodleAssignment,
   type MoodleGradeItem,
@@ -65,10 +66,28 @@ function tsToDate(ts?: number | null): Date | null {
 // Cursos
 // ---------------------------------------------------------------------------
 
-async function upsertCourse(mc: MoodleCourse, categoryNames: Map<number, string>) {
+/** Deriva facultad (nivel 1), programa (nivel 2) y ruta completa a partir de la jerarquía de categorías. */
+function categoryHierarchy(catId: number | undefined, cats: Map<number, MoodleCategory>) {
+  if (!catId || !cats.has(catId)) return { faculty: null, program: null, path: null };
+  const chain: MoodleCategory[] = [];
+  let cur = cats.get(catId);
+  let guard = 0;
+  while (cur && guard++ < 10) {
+    chain.unshift(cur);
+    cur = cur.parent ? cats.get(cur.parent) : undefined;
+  }
+  return {
+    faculty: chain[0]?.name || null,
+    program: chain[1]?.name || null,
+    path: chain.map((c) => c.name).join(" / ")
+  };
+}
+
+async function upsertCourse(mc: MoodleCourse, categories: Map<number, MoodleCategory>) {
   const professorName = mc.contacts?.map((c) => c.fullname).join(", ") || "Docente por asignar";
   const catId = mc.categoryid ?? mc.category;
-  const category = (catId && categoryNames.get(catId)) || "Moodle";
+  const category = (catId && categories.get(catId)?.name) || "Moodle";
+  const hier = categoryHierarchy(catId, categories);
   const base = moodleBaseUrl();
   const data = {
     name: mc.fullname,
@@ -77,6 +96,9 @@ async function upsertCourse(mc: MoodleCourse, categoryNames: Map<number, string>
     professorName,
     summary: stripHtml(mc.summary).slice(0, 2000) || null,
     moodleUrl: `${base}/course/view.php?id=${mc.id}`,
+    faculty: hier.faculty,
+    program: hier.program,
+    categoryPath: hier.path,
     source: "MOODLE",
     lastSyncedAt: new Date()
   };
@@ -293,6 +315,7 @@ async function syncCourseParticipants(
 
 export async function syncUser(userId: string): Promise<SyncReport> {
   const report = newReport();
+  resetCredentialChecks();
   if (!moodleConfigured()) {
     report.errors.push("Moodle no está configurado (MOODLE_WS_URL / MOODLE_WS_TOKEN).");
     return report;
@@ -314,7 +337,7 @@ export async function syncUser(userId: string): Promise<SyncReport> {
 
   // 2. Sus cursos (trae el progreso % calculado por Moodle)
   const [userCourses, categories] = await Promise.all([moodle.userCourses(mid), moodle.categories()]);
-  const categoryNames = new Map(categories.map((c) => [c.id, c.name]));
+  const categoryNames = new Map<number, MoodleCategory>(categories.map((c) => [c.id, c]));
   const detailed = await moodle.coursesByIds(userCourses.map((c) => c.id));
   const contactsById = new Map(detailed.map((c) => [c.id, c.contacts || []]));
   const courseIds = userCourses.map((c) => c.id);
@@ -380,13 +403,14 @@ async function indexDocuments(report: SyncReport, limit: number) {
 
 export async function syncAll(): Promise<SyncReport> {
   const report = newReport();
+  resetCredentialChecks();
   if (!moodleConfigured()) {
     report.errors.push("Moodle no está configurado (MOODLE_WS_URL / MOODLE_WS_TOKEN).");
     return report;
   }
 
   const [courses, categories] = await Promise.all([moodle.allCourses(), moodle.categories()]);
-  const categoryNames = new Map(categories.map((c) => [c.id, c.name]));
+  const categoryNames = new Map<number, MoodleCategory>(categories.map((c) => [c.id, c]));
   const detailed = await moodle.coursesByIds(courses.map((c) => c.id));
   const contactsById = new Map(detailed.map((c) => [c.id, c.contacts || []]));
   const allAssignments = courses.length ? await moodle.assignments(courses.map((c) => c.id)) : [];

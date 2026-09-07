@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Award, Check, ExternalLink } from "lucide-react";
+import ExportButtons from "@/components/ExportButtons";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,10 @@ export default async function MicrocredencialesPage() {
                 </div>
                 <div className="text-[11px] text-[var(--text-tertiary)] mb-3">{mc.description} · {currentStep}/{steps.length} pasos</div>
               </div>
-              {mc.moodleUrl && <a href={mc.moodleUrl} target="_blank" rel="noreferrer" className="text-[10px] text-[var(--clr-brand2)] inline-flex items-center gap-1 hover:underline shrink-0">Ver en Moodle <ExternalLink className="w-3 h-3" /></a>}
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                {mc.moodleUrl && <a href={mc.moodleUrl} target="_blank" rel="noreferrer" className="text-[10px] text-[var(--clr-brand2)] inline-flex items-center gap-1 hover:underline">Ver en Moodle <ExternalLink className="w-3 h-3" /></a>}
+                {mc.progress[0]?.earnedAt && <ExportButtons kind="certificate" size="xs" payload={{ microcredentialId: mc.id }} label="Certificado:" formats={["pdf"]} />}
+              </div>
             </div>
             <div className="flex items-center overflow-x-auto gap-0 py-2">
               {steps.map((s, i) => (

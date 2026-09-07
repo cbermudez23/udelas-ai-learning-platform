@@ -29,6 +29,10 @@ académica, qué necesitan para aprobar sus cursos y qué pasos siguen en su pla
 contexto académico proporcionado. Responde en español, de forma clara y orientadora.`
 };
 
+const STYLE_RULES = `
+Normas de estilo institucionales: no uses emojis ni iconos; escribe en español claro con formato Markdown sencillo
+(títulos cortos, listas y negritas cuando ayuden). Sé concreto y evita relleno.`;
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) {
@@ -135,7 +139,7 @@ export async function POST(req: NextRequest) {
   });
 
   const turns: ChatTurn[] = [
-    { role: "system", content: `${AGENT_SYSTEM_PROMPTS[agentType]}\n\n${academicContext}` },
+    { role: "system", content: `${AGENT_SYSTEM_PROMPTS[agentType]}${STYLE_RULES}\n\n${academicContext}` },
     ...history.map((h) => ({ role: h.role as "user" | "assistant", content: h.content })),
     { role: "user", content: message }
   ];

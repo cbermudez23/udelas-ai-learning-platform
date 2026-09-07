@@ -24,6 +24,9 @@ export async function PUT(req: NextRequest) {
   if (Number.isFinite(Number(body.temperature))) patch.temperature = Math.min(1, Math.max(0, Number(body.temperature)));
   if (Number.isFinite(Number(body.dailyMessageLimit))) patch.dailyMessageLimit = Math.max(0, Math.floor(Number(body.dailyMessageLimit)));
   if (typeof body.disabledMessage === "string") patch.disabledMessage = body.disabledMessage.slice(0, 300);
+  if (Number.isFinite(Number(body.riskGrade))) patch.riskGrade = Math.min(100, Math.max(0, Number(body.riskGrade)));
+  if (Number.isFinite(Number(body.riskProgress))) patch.riskProgress = Math.min(100, Math.max(0, Number(body.riskProgress)));
+  if (Number.isFinite(Number(body.riskOverdueMax))) patch.riskOverdueMax = Math.max(0, Math.floor(Number(body.riskOverdueMax)));
 
   const settings = await saveSettings(patch);
   return NextResponse.json({ ok: true, settings });

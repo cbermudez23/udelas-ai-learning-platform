@@ -13,7 +13,8 @@ const MAX_TEXT_CHARS = 200_000;
 const CHUNK_SIZE = 1200;
 const CHUNK_OVERLAP = 150;
 
-const SUPPORTED_EXT = new Set(["pdf", "docx", "txt", "md", "html", "htm", "csv"]);
+export const SUPPORTED_EXT = new Set(["pdf", "docx", "txt", "md", "html", "htm", "csv"]);
+export const MAX_TEXT = 200_000;
 
 function stripHtml(html: string): string {
   return html
@@ -120,7 +121,7 @@ export async function pruneCourseDocuments(courseId: string, keepModuleIds: numb
 // Extracción e indexado
 // ---------------------------------------------------------------------------
 
-async function extractText(buffer: Buffer, filename: string, mime?: string | null): Promise<string> {
+export async function extractText(buffer: Buffer, filename: string, mime?: string | null): Promise<string> {
   const ext = extOf(filename);
   if (ext === "pdf" || mime === "application/pdf") {
     const { extractText: pdfExtract, getDocumentProxy } = await import("unpdf");
@@ -160,7 +161,7 @@ export function chunkText(text: string): string[] {
   return chunks.filter((c) => c.length > 40);
 }
 
-async function replaceChunks(documentId: string, text: string) {
+export async function replaceChunks(documentId: string, text: string) {
   const chunks = chunkText(text);
   await prisma.libraryChunk.deleteMany({ where: { documentId } });
   if (chunks.length) {

@@ -5,7 +5,7 @@ const nextConfig = {
     ignoreDuringBuilds: true
   },
   experimental: {
-    serverComponentsExternalPackages: ["unpdf", "mammoth"]
+    serverComponentsExternalPackages: ["unpdf", "mammoth", "pdfkit", "docx"]
   }
 };
 

@@ -8,9 +8,7 @@
  *  - Progreso de finalización por debajo de RISK_PROGRESS (%) cuando ya hay tareas vencidas.
  */
 import { prisma } from "@/lib/prisma";
-
-export const RISK_GRADE = 71;      // UDELAS: 71 es la nota mínima de aprobación habitual
-export const RISK_PROGRESS = 30;
+import { getSettings } from "@/lib/settings";
 
 export interface StudentSummary {
   userId: string;
@@ -49,6 +47,7 @@ export async function buildCourseTeacherSummary(courseId: string): Promise<Cours
   });
   if (!course) return null;
 
+  const { riskGrade, riskProgress, riskOverdueMax } = await getSettings();
   const now = new Date();
   const overdue = course.assignments.filter((a) => a.dueDate && a.dueDate < now);
 
@@ -62,9 +61,9 @@ export async function buildCourseTeacherSummary(courseId: string): Promise<Cours
     const overdueUngraded = overdue.filter((a) => !gradedLabels.has(a.name.toLowerCase().trim())).map((a) => a.name);
 
     const reasons: string[] = [];
-    if (total !== null && total < RISK_GRADE) reasons.push(`Nota total ${Math.round(total)}% (mínimo ${RISK_GRADE}%)`);
-    if (overdueUngraded.length > 0) reasons.push(`${overdueUngraded.length} tarea(s) vencida(s) sin nota`);
-    if (overdue.length > 0 && e.progressPercent < RISK_PROGRESS) reasons.push(`Progreso ${e.progressPercent}%`);
+    if (total !== null && total < riskGrade) reasons.push(`Nota total ${Math.round(total)}% (mínimo ${riskGrade}%)`);
+    if (overdueUngraded.length > riskOverdueMax) reasons.push(`${overdueUngraded.length} tarea(s) vencida(s) sin nota`);
+    if (overdue.length > 0 && e.progressPercent < riskProgress) reasons.push(`Progreso ${e.progressPercent}% (mínimo ${riskProgress}%)`);
 
     return {
       userId: e.user.id,

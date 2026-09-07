@@ -11,6 +11,8 @@ import { prisma } from "@/lib/prisma";
 import { moodle, moodleBaseUrl, MoodleError } from "@/lib/moodle";
 
 const disabled = new Set<string>();
+/** Reinicia la memoria de funciones no disponibles (se llama al inicio de cada sincronización). */
+export function resetCredentialChecks() { disabled.clear(); }
 
 function isAccessError(e: any): boolean {
   return e instanceof MoodleError && /accessexception|invalidrecord|Access control|no está permitido|not allowed/i.test(`${e.errorcode} ${e.message}`);
@@ -18,7 +20,7 @@ function isAccessError(e: any): boolean {
 
 /** Insignias ganadas por un usuario. Devuelve la cantidad sincronizada. */
 export async function syncUserBadges(userId: string, moodleUserId: number, warn: (m: string) => void): Promise<number> {
-  if (disabled.has("badges")) return 0;
+  if (disabled.has("badges")) { warn("Insignias: falta habilitar core_badges_get_user_badges en el servicio web de Moodle."); return 0; }
   let badges;
   try {
     badges = await moodle.userBadges(moodleUserId);
@@ -75,7 +77,7 @@ export async function syncUserCourseMicrocredential(
     } catch (e: any) {
       if (isAccessError(e)) {
         disabled.add("competencies");
-        warn("Competencias: falta habilitar core_competency_list_course_competencies en el servicio web de Moodle.");
+        warn("Competencias: falta habilitar core_competency_list_course_competencies y tool_lp_data_for_user_competency_summary_in_course en el servicio web de Moodle.");
       } else throw e;
     }
   }

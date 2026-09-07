@@ -1,6 +1,7 @@
 "use client";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import ExportButtons from "@/components/ExportButtons";
 
 import { useEffect, useRef, useState } from "react";
 import { Sparkles, Send, Loader2 } from "lucide-react";
@@ -106,6 +107,11 @@ export default function ChatPanel({
             }`}
           >
             {m.role === "user" ? m.content : <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>}
+            {m.role !== "user" && agentType.startsWith("PROFESSOR") && m.content.length > 200 && (
+              <div className="mt-2 pt-2 border-t border-[var(--border-tertiary)]">
+                <ExportButtons kind="agent_output" size="xs" label="Guardar como:" payload={{ title: `${agentLabel} — ${(messages[i - 1]?.content || "material").slice(0, 60)}`, content: m.content }} />
+              </div>
+            )}
           </div>
         ))}
         {loading && (

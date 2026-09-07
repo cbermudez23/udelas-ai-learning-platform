@@ -15,7 +15,8 @@ import {
   Briefcase,
   BadgeCheck,
   LineChart,
-  ShieldCheck
+  ShieldCheck,
+  FolderDown
 } from "lucide-react";
 
 const sections: {
@@ -46,7 +47,8 @@ const sections: {
       { href: "/microcredenciales", icon: Award, label: "Microcredenciales" },
       { href: "/portafolio", icon: Briefcase, label: "Portafolio" },
       { href: "/badges", icon: BadgeCheck, label: "Credenciales digitales" },
-      { href: "/analiticas", icon: LineChart, label: "Analíticas" }
+      { href: "/analiticas", icon: LineChart, label: "Analíticas" },
+      { href: "/archivos", icon: FolderDown, label: "Mis archivos" }
     ]
   }
 ];

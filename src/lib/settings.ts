@@ -14,6 +14,9 @@ export interface AppSettings {
   temperature: number;
   dailyMessageLimit: number; // 0 = sin límite
   disabledMessage: string;
+  riskGrade: number;      // % mínimo de nota total para no estar en riesgo
+  riskProgress: number;   // % de progreso por debajo del cual hay riesgo (si hay tareas vencidas)
+  riskOverdueMax: number; // tareas vencidas sin nota toleradas (0 = ninguna)
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -24,7 +27,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   maxTokens: 800,
   temperature: 0.4,
   dailyMessageLimit: 0,
-  disabledMessage: "El Tutor IA está temporalmente en mantenimiento. Intenta más tarde."
+  disabledMessage: "El Tutor IA está temporalmente en mantenimiento. Intenta más tarde.",
+  riskGrade: 71,
+  riskProgress: 30,
+  riskOverdueMax: 0
 };
 
 let cache: { at: number; value: AppSettings } | null = null;
@@ -43,6 +49,9 @@ export async function getSettings(): Promise<AppSettings> {
   if (map.has("temperature")) s.temperature = Number(map.get("temperature"));
   if (map.has("dailyMessageLimit")) s.dailyMessageLimit = Number(map.get("dailyMessageLimit")) || 0;
   if (map.has("disabledMessage")) s.disabledMessage = map.get("disabledMessage")!;
+  if (map.has("riskGrade")) s.riskGrade = Number(map.get("riskGrade"));
+  if (map.has("riskProgress")) s.riskProgress = Number(map.get("riskProgress"));
+  if (map.has("riskOverdueMax")) s.riskOverdueMax = Number(map.get("riskOverdueMax"));
   cache = { at: Date.now(), value: s };
   return s;
 }

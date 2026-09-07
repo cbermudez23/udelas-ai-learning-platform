@@ -33,6 +33,7 @@ model User {
   role         Role     @default(STUDENT)
   avatarInitials String @default("UD")
   moodleUserId Int?     @unique   // id del usuario en Moodle (para sincronizar)
+  exports      ExportFile[]
   createdAt    DateTime @default(now())
 
   enrollments        Enrollment[]
@@ -76,6 +77,9 @@ model Course {
   summary        String?
   moodleUrl      String?
   lastSyncedAt   DateTime?
+  faculty        String?   // categoría de primer nivel en Moodle
+  program        String?   // subcategoría (carrera / programa)
+  categoryPath   String?   // "Facultad / Programa / ..." completo
 
   enrollments Enrollment[]
   exams       Exam[]
@@ -335,4 +339,21 @@ model SyncRun {
   ok          Boolean   @default(false)
   summary     String?   // resumen legible
   errors      String?   @db.Text
+}
+
+// Archivos generados por la Plataforma (reportes, materiales, exámenes, certificados) en DigitalOcean Spaces
+model ExportFile {
+  id          String   @id @default(cuid())
+  userId      String
+  kind        String   // course_report | agent_output | exam | certificate
+  title       String
+  storageKey  String   @unique
+  contentType String
+  size        Int
+  courseId    String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }

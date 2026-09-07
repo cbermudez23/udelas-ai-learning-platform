@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+body, button, input, textarea, select {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
+}
+
 :root {
   --clr-brand: #003366;
   --clr-brand2: #0055aa;

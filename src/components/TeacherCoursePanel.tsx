@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { CourseTeacherSummary } from "@/lib/teacher";
+import ExportButtons from "@/components/ExportButtons";
 
 export default function TeacherCoursePanel({ summary }: { summary: CourseTeacherSummary }) {
   const s = summary;
@@ -15,7 +16,10 @@ export default function TeacherCoursePanel({ summary }: { summary: CourseTeacher
       </div>
 
       <div className="card p-0 overflow-x-auto">
-        <div className="px-3 py-2 text-[12px] font-medium border-b border-[var(--border-tertiary)]">Seguimiento de estudiantes</div>
+        <div className="px-3 py-2 text-[12px] font-medium border-b border-[var(--border-tertiary)] flex items-center justify-between gap-2">
+          <span>Seguimiento de estudiantes</span>
+          <ExportButtons kind="course_report" payload={{ courseId: s.courseId }} label="Exportar reporte:" />
+        </div>
         {s.students.length === 0 && <div className="px-3 py-3 text-[11px] text-[var(--text-tertiary)]">Aún no hay estudiantes sincronizados en este curso.</div>}
         {s.students.length > 0 && (
           <table className="w-full text-[11px]">
@@ -33,7 +37,7 @@ export default function TeacherCoursePanel({ summary }: { summary: CourseTeacher
                   <td className="px-3 py-2 w-[140px]">
                     <div className="flex items-center gap-2"><div className="prog-bar flex-1"><div className="prog-fill" style={{ width: `${st.progressPercent}%` }} /></div><span className="text-[10px] w-8 text-right">{st.progressPercent}%</span></div>
                   </td>
-                  <td className={`px-3 py-2 text-right font-medium ${st.total !== null && st.total < 71 ? "text-[#B91C1C]" : ""}`}>{st.total !== null ? `${st.total}%` : "—"}</td>
+                  <td className={`px-3 py-2 text-right font-medium ${st.atRisk && st.riskReasons.some((r) => r.startsWith("Nota")) ? "text-[#B91C1C]" : ""}`}>{st.total !== null ? `${st.total}%` : "—"}</td>
                   <td className="px-3 py-2 text-right">{st.gradedCount}</td>
                   <td className="px-3 py-2">
                     {st.atRisk

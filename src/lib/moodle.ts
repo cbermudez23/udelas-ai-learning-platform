@@ -87,6 +87,9 @@ export interface MoodleCourse {
 export interface MoodleCategory {
   id: number;
   name: string;
+  parent?: number;
+  depth?: number;
+  path?: string; // "/1/5/9"
 }
 
 export interface MoodleSection {
@@ -238,13 +241,16 @@ export const moodle = {
     return (r || []).map((x) => x.competency);
   },
 
-  /** Estado de una competencia para un usuario en un curso. */
+  /** Estado de una competencia para un usuario en un curso (tool_lp_data_for_user_competency_summary_in_course). */
   userCompetencyInCourse: async (courseId: number, competencyId: number, moodleUserId: number) => {
-    const r = await moodleCall<{ usercompetency?: { proficiency?: boolean | null; grade?: number | null } }>(
-      "core_competency_get_user_competency_in_course",
-      { courseid: courseId, competencyid: competencyId, userid: moodleUserId }
-    );
-    return r.usercompetency ?? null;
+    const r = await moodleCall<{
+      usercompetencysummary?: {
+        usercompetencycourse?: { proficiency?: boolean | null; grade?: number | null };
+        usercompetency?: { proficiency?: boolean | null; grade?: number | null };
+      };
+    }>("tool_lp_data_for_user_competency_summary_in_course", { userid: moodleUserId, competencyid: competencyId, courseid: courseId });
+    const s = r.usercompetencysummary;
+    return s?.usercompetencycourse ?? s?.usercompetency ?? null;
   },
 
   /** Finalización oficial del curso para un usuario. */

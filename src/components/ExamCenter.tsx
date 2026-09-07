@@ -1,4 +1,5 @@
 "use client";
+import ExportButtons from "@/components/ExportButtons";
 
 import { useEffect, useState } from "react";
 import { FileCheck, Loader2, Sparkles, CheckCircle2, XCircle } from "lucide-react";
@@ -19,7 +20,7 @@ interface ExamData {
 
 type Tab = "generar" | "tomar" | "resultado";
 
-export default function ExamCenter({ courses }: { courses: { id: string; name: string }[] }) {
+export default function ExamCenter({ courses, isTeacher = false }: { courses: { id: string; name: string }[]; isTeacher?: boolean }) {
   const [tab, setTab] = useState<Tab>("generar");
   const [topic, setTopic] = useState("");
   const [numQuestions, setNumQuestions] = useState(5);
@@ -179,8 +180,8 @@ export default function ExamCenter({ courses }: { courses: { id: string; name: s
             <div className="text-[12px] font-medium mb-2">Exámenes disponibles</div>
             <div className="space-y-1.5">
               {exams.map((e) => (
+                <div key={e.id}>
                 <button
-                  key={e.id}
                   onClick={() => selectExam(e)}
                   className={`w-full text-left text-[11px] px-2.5 py-2 rounded-lg border ${
                     activeExam?.id === e.id
@@ -191,6 +192,11 @@ export default function ExamCenter({ courses }: { courses: { id: string; name: s
                   <div className="font-medium">{e.title}</div>
                   <div className="text-[var(--text-tertiary)]">{e.questions.length} preguntas</div>
                 </button>
+                <div className="px-1 pb-1 flex flex-wrap gap-2">
+                  <ExportButtons kind="exam" size="xs" payload={{ examId: e.id }} label="Exportar:" formats={["pdf", "docx"]} />
+                  {isTeacher && <ExportButtons kind="exam" size="xs" payload={{ examId: e.id, withAnswers: true }} label="Clave:" formats={["pdf"]} />}
+                </div>
+                </div>
               ))}
               {exams.length === 0 && (
                 <div className="text-[11px] text-[var(--text-tertiary)]">

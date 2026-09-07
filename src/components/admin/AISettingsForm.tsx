@@ -4,6 +4,7 @@ import { useState } from "react";
 type S = {
   aiEnabled: boolean; aiProvider: "auto" | "anthropic" | "openai"; anthropicModel: string; openaiModel: string;
   maxTokens: number; temperature: number; dailyMessageLimit: number; disabledMessage: string;
+  riskGrade: number; riskProgress: number; riskOverdueMax: number;
 };
 
 const ANTHROPIC_MODELS = ["claude-sonnet-4-5", "claude-haiku-4-5", "claude-opus-4-1"];
@@ -79,6 +80,30 @@ export default function AISettingsForm({ initial, keys }: { initial: S; keys: { 
           <span className={label}>Mensaje cuando la IA está apagada</span>
           <textarea value={s.disabledMessage} onChange={(e) => set("disabledMessage", e.target.value)} rows={2} className={input} />
         </div>
+      </div>
+
+      <div className="card space-y-3">
+        <div className="text-[12px] font-medium">Seguimiento docente: criterios de "alumno en riesgo"</div>
+        <div>
+          <span className={label}>Nota total mínima (%)</span>
+          <input type="number" min={0} max={100} value={s.riskGrade} onChange={(e) => set("riskGrade", Number(e.target.value))} className={input} />
+          <div className={help}>Por debajo de este porcentaje el estudiante se marca en riesgo. UDELAS suele usar 71.</div>
+        </div>
+        <div>
+          <span className={label}>Tareas vencidas sin nota toleradas</span>
+          <input type="number" min={0} value={s.riskOverdueMax} onChange={(e) => set("riskOverdueMax", Number(e.target.value))} className={input} />
+          <div className={help}>0 = una sola tarea vencida sin calificar ya marca riesgo.</div>
+        </div>
+        <div>
+          <span className={label}>Progreso mínimo (%) cuando hay tareas vencidas</span>
+          <input type="number" min={0} max={100} value={s.riskProgress} onChange={(e) => set("riskProgress", Number(e.target.value))} className={input} />
+          <div className={help}>Solo aplica si el curso tiene "rastreo de finalización" activado en Moodle.</div>
+        </div>
+      </div>
+
+      <div className="card space-y-3">
+        <div className="text-[12px] font-medium">Guardar</div>
+        <div className="text-[11px] text-[var(--text-secondary)]">Los cambios aplican a toda la Plataforma en menos de 30 segundos, sin redesplegar.</div>
         <div className="flex items-center gap-3 pt-1">
           <button onClick={save} disabled={saving} className="text-[11px] font-medium px-3 py-1.5 rounded-md bg-[var(--clr-brand2)] text-white hover:opacity-90 disabled:opacity-50">
             {saving ? "Guardando…" : "Guardar configuración"}
