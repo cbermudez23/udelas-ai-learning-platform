@@ -184,12 +184,19 @@ export async function blocksToPdf(meta: DocMeta, blocks: Block[]): Promise<Buffe
       }
     }
 
-    // Pie de página en todas las páginas
+    // Pie de página en todas las páginas.
+    // Se anula temporalmente el margen inferior: al escribir dentro de esa
+    // franja, PDFKit interpreta por defecto que "no cabe" y agrega una
+    // página en blanco solo para el pie. Anulando el margen evitamos ese
+    // salto automático.
     const range = doc.bufferedPageRange();
+    const bottomMargin = doc.page.margins.bottom;
     for (let i = range.start; i < range.start + range.count; i++) {
       doc.switchToPage(i);
+      doc.page.margins.bottom = 0;
       doc.font("Helvetica").fontSize(7.5).fillColor("#888888")
         .text(`Generado por UDELAS AI Learning Platform · ${date} · Página ${i + 1} de ${range.count}`, 56, doc.page.height - 40, { width: W, align: "center", lineBreak: false });
+      doc.page.margins.bottom = bottomMargin;
     }
     doc.end();
   });
