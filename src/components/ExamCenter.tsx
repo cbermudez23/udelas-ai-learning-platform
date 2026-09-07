@@ -144,7 +144,7 @@ export default function ExamCenter({ courses, isTeacher = false }: { courses: { 
               </div>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-[11px] font-medium text-[var(--text-secondary)]">
                 Número de preguntas
@@ -190,7 +190,7 @@ export default function ExamCenter({ courses, isTeacher = false }: { courses: { 
       )}
 
       {tab === "tomar" && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           <div className="card">
             <div className="text-[12px] font-medium mb-2">Exámenes disponibles</div>
             <div className="space-y-1.5">
@@ -221,7 +221,7 @@ export default function ExamCenter({ courses, isTeacher = false }: { courses: { 
             </div>
           </div>
 
-          <div className="col-span-2 space-y-2.5">
+          <div className="lg:col-span-2 space-y-2.5">
             {!activeExam && (
               <div className="card text-[12px] text-[var(--text-tertiary)]">
                 Selecciona un examen de la lista para comenzar.

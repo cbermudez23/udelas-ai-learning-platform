@@ -59,7 +59,7 @@ export default async function AdminAnalitica() {
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="card"><div className="text-[11px] text-[var(--text-tertiary)]">Facultades</div><div className="text-[20px] font-semibold">{faculties.length}</div></div>
         <div className="card"><div className="text-[11px] text-[var(--text-tertiary)]">Programas</div><div className="text-[20px] font-semibold">{rows.length}</div></div>
         <div className="card"><div className="text-[11px] text-[var(--text-tertiary)]">Estudiantes (Moodle)</div><div className="text-[20px] font-semibold">{totalStudents}</div></div>
@@ -73,9 +73,9 @@ export default async function AdminAnalitica() {
       )}
 
       {faculties.map((f) => (
-        <div key={f} className="card">
+        <div key={f} className="card overflow-x-auto">
           <div className="text-[12px] font-semibold mb-2">{f}</div>
-          <table className="w-full text-[11px]">
+          <table className="w-full text-[11px] min-w-[640px]">
             <thead className="text-left text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">
               <tr><th className="py-1.5 pr-2">Programa</th><th className="py-1.5 pr-2 text-right">Cursos</th><th className="py-1.5 pr-2 text-right">Docentes</th><th className="py-1.5 pr-2 w-[220px]">Estudiantes</th><th className="py-1.5 pr-2 text-right">Promedio</th><th className="py-1.5 pr-2 text-right">En riesgo</th><th className="py-1.5 pr-2 text-right">Mensajes IA (30 d)</th><th className="py-1.5 text-right">Materiales</th></tr>
             </thead>

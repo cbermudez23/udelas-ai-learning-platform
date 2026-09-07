@@ -14,14 +14,14 @@ const tabs = [
 export default function AdminNav() {
   const pathname = usePathname();
   return (
-    <div className="flex gap-1 bg-white border border-[var(--border-tertiary)] rounded-md p-0.5">
+    <div className="flex gap-1 bg-white border border-[var(--border-tertiary)] rounded-md p-0.5 overflow-x-auto max-w-full">
       {tabs.map((t) => {
         const active = t.href === "/admin" ? pathname === "/admin" : pathname?.startsWith(t.href);
         return (
           <Link
             key={t.href}
             href={t.href}
-            className={`text-[11px] px-2.5 py-1 rounded ${active ? "bg-[var(--clr-brand2)] text-white" : "text-[var(--text-secondary)] hover:bg-[#EEF3FF]"}`}
+            className={`text-[11px] px-2.5 py-1 rounded whitespace-nowrap shrink-0 ${active ? "bg-[var(--clr-brand2)] text-white" : "text-[var(--text-secondary)] hover:bg-[#EEF3FF]"}`}
           >
             {t.label}
           </Link>

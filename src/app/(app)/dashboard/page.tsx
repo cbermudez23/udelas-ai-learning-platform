@@ -54,7 +54,7 @@ export default async function DashboardPage() {
         <LayoutDashboard className="w-4 h-4 text-[var(--clr-brand2)]" /> Dashboard
       </div>
 
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Stat label="Progreso general" value={`${avgProgress}%`} sub="Promedio de tus cursos" />
         <Stat label="Cursos activos" value={String(studentEnrollments.length)} sub="Este período académico" />
         <Stat
@@ -72,7 +72,7 @@ export default async function DashboardPage() {
       {teaching.length > 0 && (
         <div className="card">
           <div className="text-sm font-medium mb-2">Mis cursos como docente</div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {teaching.map((t) => (
               <Link key={t.courseId} href={`/cursos/${t.courseId}`} className="border border-[var(--border-tertiary)] rounded-lg p-3 hover:shadow-md transition-shadow block">
                 <div className="text-[13px] font-medium">{t.courseName}</div>
@@ -94,7 +94,7 @@ export default async function DashboardPage() {
             Mis cursos
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {studentEnrollments.length === 0 && <div className="text-[11px] text-[var(--text-tertiary)] col-span-2">No estás matriculado como estudiante en ningún curso.</div>}
           {studentEnrollments.map((e) => (
             <Link href={`/cursos/${e.id ? e.course.id : ""}`} key={e.id} className="border border-[var(--border-tertiary)] rounded-lg p-3 block hover:shadow-md transition-shadow">

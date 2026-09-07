@@ -106,7 +106,7 @@ export default function ChatPanel({
                 : "bg-white border border-[var(--border-tertiary)] self-start rounded-bl-sm chat-md"
             }`}
           >
-            {m.role === "user" ? m.content : <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>}
+            {m.role === "user" ? m.content : <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ table: ({ node, ...props }) => <div className="overflow-x-auto"><table {...props} /></div> }}>{m.content}</ReactMarkdown>}
             {m.role !== "user" && agentType.startsWith("PROFESSOR") && m.content.length > 200 && (
               <div className="mt-2 pt-2 border-t border-[var(--border-tertiary)]">
                 <ExportButtons kind="agent_output" size="xs" label="Guardar como:" payload={{ title: `${agentLabel} — ${(messages[i - 1]?.content || "material").slice(0, 60)}`, content: m.content }} />

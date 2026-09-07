@@ -123,8 +123,8 @@ export default async function CursoDetallePage({ params }: { params: { id: strin
 
       {teacherSummary && <TeacherCoursePanel summary={teacherSummary} />}
 
-      <div className="grid grid-cols-3 gap-3">
-        <div className="col-span-2 space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <div className="lg:col-span-2 space-y-3">
           <div className="text-[13px] font-medium">Contenidos del curso</div>
           {sections.length === 0 && (
             <div className="card text-[11px] text-[var(--text-tertiary)]">Este curso aún no tiene contenidos sincronizados.</div>

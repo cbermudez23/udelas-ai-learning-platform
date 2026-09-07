@@ -31,7 +31,7 @@ export default function AISettingsForm({ initial, keys }: { initial: S; keys: { 
   const help = "text-[10px] text-[var(--text-tertiary)] mt-1";
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
       <div className="card space-y-3">
         <div className="text-[12px] font-medium">Proveedor y modelo</div>
         <label className="flex items-center gap-2 text-[11px]">

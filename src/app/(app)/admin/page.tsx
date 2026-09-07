@@ -57,7 +57,7 @@ export default async function AdminHome() {
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Stat label="Estudiantes" value={students} />
         <Stat label="Docentes" value={professors} sub={`${admins} administrador(es)`} />
         <Stat label="Cursos" value={coursesMoodle + coursesLocal} sub={`${coursesMoodle} de Moodle · ${coursesLocal} locales/demo`} />
@@ -88,10 +88,10 @@ export default async function AdminHome() {
         </div>
       </div>
 
-      <div className="card">
+      <div className="card overflow-x-auto">
         <div className="text-[12px] font-medium mb-2">Últimas sincronizaciones</div>
         {lastRuns.length === 0 && <div className="text-[11px] text-[var(--text-tertiary)]">Aún no hay sincronizaciones registradas.</div>}
-        <table className="w-full text-[11px]">
+        <table className="w-full text-[11px] min-w-[560px]">
           <tbody>
             {lastRuns.map((r) => (
               <tr key={r.id} className="border-t border-[var(--border-tertiary)]">

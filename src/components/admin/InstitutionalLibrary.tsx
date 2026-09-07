@@ -44,8 +44,8 @@ export default function InstitutionalLibrary({ docs, moodleCount }: { docs: Row[
         <div className="text-[11px] text-[var(--text-secondary)] mb-3">
           Reglamentos, guías, políticas y manuales de UDELAS. Están disponibles para todos los usuarios en la Biblioteca IA y el Tutor IA los cita cuando son relevantes. Los materiales de los cursos ({moodleCount}) llegan solos desde Moodle y no se gestionan aquí.
         </div>
-        <div className="grid grid-cols-4 gap-2 items-end">
-          <div className="col-span-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 items-end">
+          <div className="lg:col-span-2">
             <label className="block text-[11px] font-medium mb-1">Título</label>
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej. Reglamento de evaluación estudiantil 2026" className={input} />
           </div>
@@ -59,7 +59,7 @@ export default function InstitutionalLibrary({ docs, moodleCount }: { docs: Row[
             <label className="block text-[11px] font-medium mb-1">Etiquetas (coma)</label>
             <input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="evaluación, grado" className={input} />
           </div>
-          <div className="col-span-3">
+          <div className="sm:col-span-2 lg:col-span-3">
             <label className="block text-[11px] font-medium mb-1">Archivo (PDF, Word, texto · máx. 20 MB)</label>
             <input type="file" accept=".pdf,.docx,.txt,.md,.html,.htm" onChange={(e) => setFile(e.target.files?.[0] || null)} className="text-[11px]" />
           </div>

@@ -50,7 +50,7 @@ export default function AgentesPage() {
       <div className="flex items-center gap-2 text-[13px] font-medium">
         <Users className="w-4 h-4 text-[var(--clr-brand2)]" /> Agentes docentes
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {AGENTS.map((a) => {
           const Icon = a.icon;
           return (

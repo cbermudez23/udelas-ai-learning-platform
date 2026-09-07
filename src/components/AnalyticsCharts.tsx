@@ -39,7 +39,7 @@ export default function AnalyticsCharts({
   agentUsage: AgentUsage[];
 }) {
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <div className="card">
         <div className="text-[12px] font-medium mb-2">Progreso por curso (%)</div>
         <div style={{ width: "100%", height: 220 }}>
@@ -70,7 +70,7 @@ export default function AnalyticsCharts({
         </div>
       </div>
 
-      <div className="card col-span-2">
+      <div className="card sm:col-span-2">
         <div className="text-[12px] font-medium mb-2">Uso del Tutor IA y Agentes docentes</div>
         <div style={{ width: "100%", height: 240 }}>
           <ResponsiveContainer>

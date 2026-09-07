@@ -37,8 +37,8 @@ export default function CalendarGrid({ events }: { events: CalEvent[] }) {
   const eventsByDay = (d: Date) => events.filter((e) => isSameDay(new Date(e.date), d));
 
   return (
-    <div className="grid grid-cols-4 gap-4">
-      <div className="col-span-3 card">
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div className="lg:col-span-3 card">
         <div className="text-[13px] font-medium mb-3 capitalize">
           {format(today, "MMMM yyyy", { locale: es })}
         </div>

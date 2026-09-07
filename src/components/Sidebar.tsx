@@ -56,11 +56,17 @@ const sections: {
 export default function Sidebar({
   userName,
   progress,
-  role
+  role,
+  open = false,
+  onNavigate
 }: {
   userName: string;
   progress: number;
   role?: string;
+  /** En móvil/tablet (<lg), controla si el drawer está abierto. En desktop (lg+) el sidebar siempre es visible. */
+  open?: boolean;
+  /** Se llama al tocar un enlace (para cerrar el drawer en móvil). */
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const visibleSections =
@@ -75,7 +81,14 @@ export default function Sidebar({
       : sections;
 
   return (
-    <aside className="w-[220px] shrink-0 bg-white border-r border-[var(--border-tertiary)] flex flex-col overflow-y-auto">
+    <aside
+      className={`fixed inset-y-0 left-0 z-40 w-[240px] sm:w-[220px] shrink-0 bg-white border-r border-[var(--border-tertiary)] flex flex-col overflow-y-auto transition-transform duration-200 ease-out
+        lg:static lg:translate-x-0 lg:z-auto
+        ${open ? "translate-x-0 shadow-xl" : "-translate-x-full"}`}
+    >
+      {/* En móvil el sidebar cubre desde el top de la pantalla (fixed inset-y-0).
+          Este div reserva la altura del header para que el contenido empiece debajo de él. */}
+      <div className="h-[52px] shrink-0 lg:hidden" aria-hidden="true" />
       <div className="px-3 pt-3 pb-2">
         <div className="text-xs text-[var(--text-secondary)]">Bienvenido,</div>
         <div className="text-sm font-medium">{userName}</div>
@@ -104,6 +117,7 @@ export default function Sidebar({
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={onNavigate}
                 className={`mx-1.5 my-0.5 flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] transition-colors ${
                   active
                     ? "bg-[#EEF3FF] text-[var(--clr-brand2)] font-medium"

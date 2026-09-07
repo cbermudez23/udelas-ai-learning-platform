@@ -2,8 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import Sidebar from "@/components/Sidebar";
-import Header from "@/components/Header";
+import AppShell from "@/components/AppShell";
 
 export default async function AppLayout({
   children
@@ -25,14 +24,13 @@ export default async function AppLayout({
       : 0;
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
-      <Header avatarInitials={session.user.avatarInitials} />
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar userName={session.user.name || "Usuario"} progress={avgProgress} role={session.user.role} />
-        <main className="flex-1 overflow-y-auto p-4 bg-[var(--bg-tertiary)]">
-          {children}
-        </main>
-      </div>
-    </div>
+    <AppShell
+      avatarInitials={session.user.avatarInitials}
+      userName={session.user.name || "Usuario"}
+      progress={avgProgress}
+      role={session.user.role}
+    >
+      {children}
+    </AppShell>
   );
 }

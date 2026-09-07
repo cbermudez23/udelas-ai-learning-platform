@@ -7,7 +7,7 @@ export default function TeacherCoursePanel({ summary }: { summary: CourseTeacher
   const now = new Date();
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="card"><div className="text-[11px] text-[var(--text-tertiary)]">Estudiantes</div><div className="text-[20px] font-semibold">{s.studentCount}</div></div>
         <div className="card"><div className="text-[11px] text-[var(--text-tertiary)]">Promedio del curso</div><div className="text-[20px] font-semibold">{s.averageTotal !== null ? `${s.averageTotal}%` : "—"}</div></div>
         <div className="card"><div className="text-[11px] text-[var(--text-tertiary)]">En riesgo</div><div className={`text-[20px] font-semibold ${s.atRiskCount ? "text-[#B91C1C]" : "text-[#166534]"}`}>{s.atRiskCount}</div></div>
@@ -51,7 +51,7 @@ export default function TeacherCoursePanel({ summary }: { summary: CourseTeacher
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="card">
           <div className="text-[12px] font-medium mb-2">Estado de las tareas</div>
           {s.assignmentsDue.length === 0 && <div className="text-[11px] text-[var(--text-tertiary)]">Sin tareas.</div>}

@@ -45,10 +45,10 @@ export default function UsersTable({ users, currentUserId }: { users: Row[]; cur
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <input
           value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nombre o correo…"
-          className="text-[11px] border border-[var(--border-tertiary)] rounded-md px-2.5 py-1.5 w-[280px] bg-white"
+          className="text-[11px] border border-[var(--border-tertiary)] rounded-md px-2.5 py-1.5 w-full sm:w-[280px] bg-white"
         />
         <div className="text-[11px] text-[var(--text-tertiary)]">{list.length} de {users.length} usuario(s) {msg && `· ${msg}`}</div>
       </div>

@@ -30,7 +30,7 @@ export default async function CursosPage() {
         </div>
         <MoodleSyncButton />
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {enrollments.map((e) => (
           <Link key={e.id} href={`/cursos/${e.course.id}`} className="card block hover:shadow-md transition-shadow">
             <div

@@ -98,7 +98,7 @@ export default async function AnaliticasPage() {
         <LineChart className="w-4 h-4 text-[var(--clr-brand2)]" /> Analíticas de aprendizaje
       </div>
 
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Stat label="Progreso general" value={`${avgProgress}%`} sub={`${enrollments.length} curso(s)`} />
         <Stat label="Promedio de notas" value={avgGrade !== null ? `${avgGrade}%` : "—"} />
         <Stat label="Mensajes al Tutor IA" value={totalMessages} />
@@ -112,7 +112,7 @@ export default async function AnaliticasPage() {
       />
 
       {attempts.length > 0 && (
-        <div className="card">
+        <div className="card overflow-x-auto">
           <div className="text-[12px] font-medium mb-2">Últimos exámenes IA</div>
           <table className="w-full text-[11px]">
             <tbody>

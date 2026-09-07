@@ -31,7 +31,7 @@ export default function AchievementsPanel({ microcredentials, badges, certificat
         <GraduationCap className="w-4 h-4 text-[var(--clr-brand2)]" /> Logros académicos
         <span className="text-[10px] font-normal text-[var(--text-tertiary)]">Sincronizados desde Moodle</span>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <div className="text-[11px] font-medium text-[var(--text-secondary)] mb-1.5 flex items-center gap-1"><Award className="w-3.5 h-3.5" /> Microcredenciales ({microcredentials.length})</div>
           {microcredentials.length === 0 && <div className="text-[10px] text-[var(--text-tertiary)]">Ninguna obtenida aún.</div>}

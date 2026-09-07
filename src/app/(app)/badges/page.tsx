@@ -29,7 +29,7 @@ export default async function BadgesPage() {
             Aún no tienes insignias. Las que ganes en Moodle aparecerán aquí automáticamente.
           </div>
         )}
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {earned.map((e) => (
             <div key={e.id} className="text-center p-2.5">
               <div className="w-[64px] h-[64px] rounded-full flex items-center justify-center text-xl mx-auto mb-1.5 bg-[#FDF3E3] overflow-hidden">
@@ -55,7 +55,7 @@ export default async function BadgesPage() {
       {pendingLocal.length > 0 && (
         <div className="card">
           <div className="text-[12px] font-medium mb-2">Por obtener</div>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
             {pendingLocal.map((b) => (
               <div key={b.id} className="text-center p-2.5">
                 <div className="w-[52px] h-[52px] rounded-full flex items-center justify-center text-xl mx-auto mb-1.5 bg-[var(--bg-secondary)] opacity-40 grayscale">{b.icon}</div>
