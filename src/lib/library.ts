@@ -208,10 +208,10 @@ export async function backfillEmbeddings(maxChunks = 200): Promise<{ embedded: n
   if (!voyageConfigured()) return { embedded: 0 };
   await ensureVectorExtension();
 
-  const pending = await prisma.$queryRawUnsafe<{ id: string; text: string }[]>(
+  const pending = (await prisma.$queryRawUnsafe(
     `SELECT id, text FROM "LibraryChunk" WHERE embedding IS NULL LIMIT $1`,
     maxChunks
-  );
+  )) as { id: string; text: string }[];
   if (pending.length === 0) return { embedded: 0 };
   await embedChunks(pending);
   return { embedded: pending.length };
@@ -303,16 +303,17 @@ async function ensureSearchIndex() {
 }
 
 let vectorEnsured = false;
-/** Activa la extensión pgvector y crea el índice HNSW (una sola vez por arranque del servidor). */
+/** Activa pgvector, crea la columna embedding y el índice HNSW (una sola vez por arranque del servidor). Todo por SQL crudo: nunca depende del build de Prisma. */
 async function ensureVectorExtension() {
   if (vectorEnsured) return;
   try {
     await prisma.$executeRawUnsafe(`CREATE EXTENSION IF NOT EXISTS vector`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "LibraryChunk" ADD COLUMN IF NOT EXISTS embedding vector(1024)`);
     await prisma.$executeRawUnsafe(
       `CREATE INDEX IF NOT EXISTS "LibraryChunk_embedding_idx" ON "LibraryChunk" USING hnsw (embedding vector_cosine_ops)`
     );
   } catch (e) {
-    console.warn("No se pudo activar pgvector / crear el índice vectorial (la búsqueda semántica quedará deshabilitada):", e);
+    console.warn("No se pudo activar pgvector / crear la columna e índice vectorial (la búsqueda semántica quedará deshabilitada):", e);
   }
   vectorEnsured = true;
 }

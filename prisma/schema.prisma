@@ -247,7 +247,9 @@ model LibraryChunk {
   documentId String
   order      Int
   text       String  @db.Text
-  embedding  Unsupported("vector(1024)")? // embedding de Voyage AI (voyage-3); nulo si aún no se generó o Voyage no está configurado
+  // El embedding (columna pgvector) se crea y gestiona por SQL crudo en tiempo de
+  // ejecución (ver ensureVectorExtension en src/lib/library.ts), no aquí: así el
+  // build (`prisma db push`) nunca depende de si la extensión "vector" existe.
 
   document LibraryDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
