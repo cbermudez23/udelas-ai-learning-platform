@@ -5,6 +5,7 @@
  *  indexPendingDocuments()    → descarga, extrae texto, fragmenta y guarda (se llama al final de cada sync)
  *  searchChunks()             → búsqueda de texto completo (PostgreSQL, diccionario español)
  */
+import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { moodleDownload, type MoodleModule } from "@/lib/moodle";
 
@@ -173,9 +174,47 @@ export async function replaceChunks(documentId: string, text: string) {
   const chunks = chunkText(text);
   await prisma.libraryChunk.deleteMany({ where: { documentId } });
   if (chunks.length) {
-    await prisma.libraryChunk.createMany({ data: chunks.map((t, i) => ({ documentId, order: i, text: t })) });
+    // Generamos los ids nosotros mismos para poder escribir el embedding (columna
+    // pgvector, no soportada por el cliente de Prisma) en una segunda pasada por id.
+    const rows = chunks.map((t, i) => ({ id: randomUUID(), documentId, order: i, text: t }));
+    await prisma.libraryChunk.createMany({ data: rows });
+    await embedChunks(rows).catch((e) => console.warn("Búsqueda semántica: no se pudieron generar embeddings:", e.message));
   }
   return chunks.length;
+}
+
+/** Genera y guarda los embeddings de un lote de fragmentos recién creados (si Voyage está configurado). */
+async function embedChunks(rows: { id: string; text: string }[]) {
+  const { voyageConfigured, embedDocuments, toVectorLiteral } = await import("@/lib/voyage");
+  if (!voyageConfigured() || rows.length === 0) return;
+  await ensureVectorExtension();
+  const vectors = await embedDocuments(rows.map((r) => r.text));
+  for (let i = 0; i < rows.length; i++) {
+    await prisma.$executeRawUnsafe(
+      `UPDATE "LibraryChunk" SET embedding = $1::vector WHERE id = $2`,
+      toVectorLiteral(vectors[i]),
+      rows[i].id
+    );
+  }
+}
+
+/**
+ * Genera embeddings para fragmentos ya existentes que aún no lo tienen (por
+ * ejemplo, indexados antes de activar Voyage AI, o si una corrida anterior
+ * falló a mitad de camino). Se llama automáticamente tras cada indexado.
+ */
+export async function backfillEmbeddings(maxChunks = 200): Promise<{ embedded: number }> {
+  const { voyageConfigured } = await import("@/lib/voyage");
+  if (!voyageConfigured()) return { embedded: 0 };
+  await ensureVectorExtension();
+
+  const pending = await prisma.$queryRawUnsafe<{ id: string; text: string }[]>(
+    `SELECT id, text FROM "LibraryChunk" WHERE embedding IS NULL LIMIT $1`,
+    maxChunks
+  );
+  if (pending.length === 0) return { embedded: 0 };
+  await embedChunks(pending);
+  return { embedded: pending.length };
 }
 
 /** Procesa hasta `limit` documentos pendientes. Devuelve { indexed, failed }. */
@@ -203,12 +242,39 @@ export async function indexPendingDocuments(limit = 10): Promise<{ indexed: numb
   }
   const { terminateOcrWorker } = await import("@/lib/ocr");
   await terminateOcrWorker();
+  try {
+    const { embedded } = await backfillEmbeddings(200);
+    if (embedded > 0) console.log(`Búsqueda semántica: ${embedded} fragmento(s) existentes recibieron embedding.`);
+  } catch (e: any) {
+    console.warn("Relleno de embeddings falló:", e.message);
+  }
+
   return { indexed, failed, errors };
 }
 
 // ---------------------------------------------------------------------------
 // Búsqueda
 // ---------------------------------------------------------------------------
+
+/** Fusiona dos listas de resultados ya ordenadas mediante Reciprocal Rank Fusion (RRF). */
+function fuseRankedResults(a: ChunkHit[], b: ChunkHit[], limit: number): ChunkHit[] {
+  const K = 60;
+  const scores = new Map<string, { hit: ChunkHit; score: number }>();
+  const add = (list: ChunkHit[]) => {
+    list.forEach((hit, i) => {
+      const prev = scores.get(hit.chunkId);
+      const inc = 1 / (K + i + 1);
+      if (prev) prev.score += inc;
+      else scores.set(hit.chunkId, { hit, score: inc });
+    });
+  };
+  add(a);
+  add(b);
+  return [...scores.values()]
+    .sort((x, y) => y.score - x.score)
+    .slice(0, limit)
+    .map(({ hit, score }) => ({ ...hit, rank: score }));
+}
 
 export interface ChunkHit {
   chunkId: string;
@@ -236,21 +302,40 @@ async function ensureSearchIndex() {
   indexEnsured = true;
 }
 
+let vectorEnsured = false;
+/** Activa la extensión pgvector y crea el índice HNSW (una sola vez por arranque del servidor). */
+async function ensureVectorExtension() {
+  if (vectorEnsured) return;
+  try {
+    await prisma.$executeRawUnsafe(`CREATE EXTENSION IF NOT EXISTS vector`);
+    await prisma.$executeRawUnsafe(
+      `CREATE INDEX IF NOT EXISTS "LibraryChunk_embedding_idx" ON "LibraryChunk" USING hnsw (embedding vector_cosine_ops)`
+    );
+  } catch (e) {
+    console.warn("No se pudo activar pgvector / crear el índice vectorial (la búsqueda semántica quedará deshabilitada):", e);
+  }
+  vectorEnsured = true;
+}
+
 /**
  * Busca fragmentos relevantes. `courseIds` limita a los cursos del usuario
  * (los documentos institucionales sin curso siempre se incluyen).
+ */
+/**
+ * Búsqueda híbrida: combina texto completo (PostgreSQL) y búsqueda semántica
+ * (embeddings de Voyage AI, si está configurada) mediante fusión de rangos
+ * recíprocos (RRF). Si Voyage no está configurado, se usa solo texto completo.
  */
 export async function searchChunks(query: string, courseIds: string[] | null, limit = 8): Promise<ChunkHit[]> {
   const q = query.trim().slice(0, 300);
   if (!q) return [];
   await ensureSearchIndex();
 
-  const courseFilter = courseIds
-    ? `AND (d."courseId" IS NULL OR d."courseId" = ANY($2::text[]))`
-    : "";
+  const candidateLimit = Math.max(15, limit * 2);
+  const courseFilter = courseIds ? `AND (d."courseId" IS NULL OR d."courseId" = ANY($2::text[]))` : "";
   const params: any[] = courseIds ? [q, courseIds] : [q];
 
-  const sql = `
+  const textSql = `
     SELECT c.id AS "chunkId", c."documentId", d.title, d.type, d."courseId", co.name AS "courseName", d."moodleUrl", c."order", c.text,
            ts_rank_cd(to_tsvector('spanish', c.text), websearch_to_tsquery('spanish', $1)) AS rank
     FROM "LibraryChunk" c
@@ -259,17 +344,44 @@ export async function searchChunks(query: string, courseIds: string[] | null, li
     WHERE to_tsvector('spanish', c.text) @@ websearch_to_tsquery('spanish', $1)
     ${courseFilter}
     ORDER BY rank DESC
-    LIMIT ${Math.max(1, Math.min(limit, 20))}`;
+    LIMIT ${candidateLimit}`;
 
-  let rows: ChunkHit[] = [];
+  let textHits: ChunkHit[] = [];
   try {
-    rows = (await prisma.$queryRawUnsafe(sql, ...params)) as ChunkHit[];
+    textHits = (await prisma.$queryRawUnsafe(textSql, ...params)) as ChunkHit[];
   } catch (e) {
-    console.warn("Búsqueda de texto completo falló, usando búsqueda simple:", e);
+    console.warn("Búsqueda de texto completo falló:", e);
   }
-  if (rows.length > 0) return rows.map((r) => ({ ...r, rank: Number(r.rank) }));
 
-  // Respaldo: coincidencia simple por términos
+  let semanticHits: ChunkHit[] = [];
+  const { voyageConfigured, embedQuery, toVectorLiteral } = await import("@/lib/voyage");
+  if (voyageConfigured()) {
+    try {
+      await ensureVectorExtension();
+      const vector = toVectorLiteral(await embedQuery(q));
+      const vecFilter = courseIds ? `AND (d."courseId" IS NULL OR d."courseId" = ANY($3::text[]))` : "";
+      const vecParams: any[] = courseIds ? [vector, vector, courseIds] : [vector, vector];
+      const semanticSql = `
+        SELECT c.id AS "chunkId", c."documentId", d.title, d.type, d."courseId", co.name AS "courseName", d."moodleUrl", c."order", c.text,
+               1 - (c.embedding <=> $1::vector) AS rank
+        FROM "LibraryChunk" c
+        JOIN "LibraryDocument" d ON d.id = c."documentId"
+        LEFT JOIN "Course" co ON co.id = d."courseId"
+        WHERE c.embedding IS NOT NULL
+        ${vecFilter}
+        ORDER BY c.embedding <=> $2::vector ASC
+        LIMIT ${candidateLimit}`;
+      semanticHits = (await prisma.$queryRawUnsafe(semanticSql, ...vecParams)) as ChunkHit[];
+    } catch (e: any) {
+      console.warn("Búsqueda semántica falló, se usa solo texto completo:", e.message);
+    }
+  }
+
+  if (textHits.length > 0 || semanticHits.length > 0) {
+    return fuseRankedResults(textHits, semanticHits, limit);
+  }
+
+  // Respaldo: coincidencia simple por términos (sin índice de texto completo disponible)
   const terms = q.split(/\s+/).filter((t) => t.length > 2).slice(0, 5);
   if (!terms.length) return [];
   const chunks = await prisma.libraryChunk.findMany({
