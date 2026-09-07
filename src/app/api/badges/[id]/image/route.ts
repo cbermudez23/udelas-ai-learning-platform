@@ -26,7 +26,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   try {
     const { buffer, contentType } = await moodleDownload(badge.imageUrl);
-    return new NextResponse(buffer, {
+    const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
+    return new NextResponse(arrayBuffer, {
       headers: {
         "Content-Type": contentType || "image/png",
         "Cache-Control": "private, max-age=86400" // las imágenes de insignias no cambian
