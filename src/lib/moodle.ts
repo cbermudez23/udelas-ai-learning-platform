@@ -262,6 +262,20 @@ export const moodle = {
    * usa "calificación avanzada" en vez de calificación directa): en su lugar
    * devuelve un array de "warnings" que hay que revisar explícitamente.
    */
+  /**
+   * Calificaciones registradas directamente en la tabla del módulo de tareas
+   * (assign_grades), independiente del libro de calificaciones centralizado.
+   * Útil para diagnosticar si el problema está en el módulo o en el "push"
+   * hacia el gradebook.
+   */
+  assignmentGrades: async (moodleAssignId: number) => {
+    const r = await moodleCall<{ assignments: { assignmentid: number; grades: { userid: number; grade: string; attemptnumber: number }[] }[] }>(
+      "mod_assign_get_grades",
+      { assignmentids: [moodleAssignId] }
+    );
+    return r.assignments?.[0]?.grades ?? [];
+  },
+
   saveGrade: async (params: {
     moodleAssignId: number;
     moodleUserId: number;

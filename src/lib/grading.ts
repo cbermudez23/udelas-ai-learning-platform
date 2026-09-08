@@ -168,6 +168,17 @@ export async function saveGradeToMoodle(opts: {
   });
   console.log(`[grading] mod_assign_save_grade respondió. warnings=${JSON.stringify(warnings)}`);
 
+  // Verificación directa en la tabla del módulo (assign_grades), independiente del
+  // libro de calificaciones centralizado: nos dice si el problema está en el "push"
+  // hacia el gradebook, o si ni siquiera el módulo de tareas registró el cambio.
+  const subsAfter = await moodle.assignmentSubmissions(assignment.moodleAssignId);
+  const subAfter = subsAfter.find((s) => s.userid === opts.moodleUserId);
+  console.log(`[grading] Estado en assign_grades tras guardar: gradingstatus=${subAfter?.gradingstatus} (directamente en el módulo de tareas, no en el libro de calificaciones)`);
+
+  const rawGrades = await moodle.assignmentGrades(assignment.moodleAssignId).catch((e) => { console.warn("[grading] assignmentGrades falló:", e.message); return []; });
+  const rawGrade = rawGrades.find((g) => g.userid === opts.moodleUserId);
+  console.log(`[grading] Valor numérico en assign_grades (mod_assign_get_grades): ${JSON.stringify(rawGrade)}`);
+
   // Refresca la nota localmente de inmediato (sin esperar al próximo ciclo de sincronización)
   const user = await prisma.user.findUnique({ where: { moodleUserId: opts.moodleUserId } });
   if (user) {
