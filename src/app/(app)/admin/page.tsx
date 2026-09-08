@@ -12,7 +12,7 @@ const EXPECTED_FUNCTIONS = [
   "core_completion_get_activities_completion_status", "core_calendar_get_action_events_by_course",
   "core_badges_get_user_badges", "core_completion_get_course_completion_status",
   "core_competency_list_course_competencies", "tool_lp_data_for_user_competency_summary_in_course",
-  "mod_assign_get_submissions", "mod_assign_get_grades", "core_grades_update_grades", "mod_assign_save_grades", "core_course_create_courses", "enrol_manual_enrol_users"
+  "mod_assign_get_submissions", "mod_assign_get_grades", "core_grades_update_grades", "mod_assign_save_grades", "core_course_create_courses", "enrol_manual_enrol_users", "core_course_update_courses"
 ];
 
 function Stat({ label, value, sub }: { label: string; value: string | number; sub?: string }) {

@@ -17,6 +17,49 @@
 import { prisma } from "@/lib/prisma";
 import { moodle, moodleBaseUrl } from "@/lib/moodle";
 
+export async function updateCourseInMoodle(opts: {
+  courseId: string; // id local (Prisma)
+  fullname?: string;
+  categoryid?: number;
+  summary?: string;
+  format?: string;
+}) {
+  const course = await prisma.course.findUnique({ where: { id: opts.courseId } });
+  if (!course) throw new Error("Curso no encontrado.");
+  if (!course.moodleCourseId) {
+    throw new Error("Este curso no vive en Moodle (no tiene moodleCourseId), no se puede editar por esta vía.");
+  }
+
+  console.log(`[course-edit] Actualizando curso moodleCourseId=${course.moodleCourseId}...`);
+  await moodle.updateCourse({
+    id: course.moodleCourseId,
+    fullname: opts.fullname,
+    categoryid: opts.categoryid,
+    summary: opts.summary,
+    format: opts.format
+  });
+  console.log(`[course-edit] Moodle actualizado. Refrescando copia local...`);
+
+  let categoryName: string | undefined;
+  if (opts.categoryid !== undefined) {
+    const categories = await moodle.categories().catch(() => []);
+    categoryName = categories.find((c) => c.id === opts.categoryid)?.name;
+  }
+
+  const updated = await prisma.course.update({
+    where: { id: course.id },
+    data: {
+      ...(opts.fullname !== undefined ? { name: opts.fullname } : {}),
+      ...(categoryName !== undefined ? { category: categoryName, faculty: categoryName } : {}),
+      ...(opts.summary !== undefined ? { summary: opts.summary } : {}),
+      lastSyncedAt: new Date()
+    }
+  });
+
+  console.log(`[course-edit] Copia local actualizada, id=${updated.id}`);
+  return updated;
+}
+
 export async function createCourseInMoodle(opts: {
   requestingUserId: string; // id local (Prisma) del docente que crea el curso
   fullname: string;

@@ -9,12 +9,11 @@ interface Category {
   depth?: number;
 }
 
-export default function CreateCourseForm() {
+export default function EditCourseForm({ courseId }: { courseId: string }) {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(true);
   const [fullname, setFullname] = useState("");
-  const [shortname, setShortname] = useState("");
   const [categoryid, setCategoryid] = useState("");
   const [summary, setSummary] = useState("");
   const [format, setFormat] = useState<"topics" | "weeks" | "singleactivity">("topics");
@@ -22,32 +21,33 @@ export default function CreateCourseForm() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/courses/create-in-moodle")
+    fetch(`/api/courses/${courseId}/edit`)
       .then((r) => r.json())
       .then((d) => {
-        if (d.categories) setCategories(d.categories);
-        else setError(d.error || "No se pudieron cargar las categorías");
+        if (d.error) { setError(d.error); return; }
+        setFullname(d.course.fullname ?? "");
+        setSummary(d.course.summary ?? "");
+        setFormat((d.course.format as any) ?? "topics");
+        setCategoryid(String(d.course.categoryid ?? ""));
+        setCategories(d.categories ?? []);
       })
-      .catch((e) => setError(e.message || "Error de red al cargar categorías"))
-      .finally(() => setLoadingCategories(false));
-  }, []);
+      .catch((e) => setError(e.message || "Error de red al cargar el curso"))
+      .finally(() => setLoading(false));
+  }, [courseId]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch("/api/courses/create-in-moodle", {
-        method: "POST",
+      const res = await fetch(`/api/courses/${courseId}/edit`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fullname, shortname, categoryid, summary, format })
+        body: JSON.stringify({ fullname, categoryid, summary, format })
       });
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "No se pudo crear el curso");
-        return;
-      }
-      router.push(`/cursos/${data.course.id}`);
+      if (!res.ok) { setError(data.error || "No se pudo guardar"); return; }
+      router.push(`/cursos/${courseId}`);
       router.refresh();
     } catch (e: any) {
       setError(e.message || "Error de red");
@@ -55,6 +55,8 @@ export default function CreateCourseForm() {
       setSubmitting(false);
     }
   }
+
+  if (loading) return <div className="card text-[12px] text-[var(--text-tertiary)]">Cargando datos del curso…</div>;
 
   return (
     <form onSubmit={onSubmit} className="card space-y-3 max-w-lg">
@@ -64,22 +66,8 @@ export default function CreateCourseForm() {
           required
           value={fullname}
           onChange={(e) => setFullname(e.target.value)}
-          placeholder="Ej. Introducción a la Programación"
           className="mt-1 w-full text-[12px] border border-[var(--border)] rounded-md px-2.5 py-1.5"
         />
-      </div>
-      <div>
-        <label className="text-[11px] font-medium text-[var(--text-secondary)]">Nombre corto (único, sin espacios)</label>
-        <input
-          required
-          value={shortname}
-          onChange={(e) => setShortname(e.target.value)}
-          placeholder="Ej. PROG101-2026"
-          className="mt-1 w-full text-[12px] border border-[var(--border)] rounded-md px-2.5 py-1.5"
-        />
-        <div className="text-[10px] text-[var(--text-tertiary)] mt-0.5">
-          Moodle lo rechazará si ya existe otro curso con este mismo nombre corto.
-        </div>
       </div>
       <div>
         <label className="text-[11px] font-medium text-[var(--text-secondary)]">Categoría</label>
@@ -87,10 +75,8 @@ export default function CreateCourseForm() {
           required
           value={categoryid}
           onChange={(e) => setCategoryid(e.target.value)}
-          disabled={loadingCategories}
           className="mt-1 w-full text-[12px] border border-[var(--border)] rounded-md px-2.5 py-1.5"
         >
-          <option value="">{loadingCategories ? "Cargando…" : "Selecciona una categoría"}</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
               {"—".repeat(Math.max(0, (c.depth ?? 1) - 1))} {c.name}
@@ -105,13 +91,13 @@ export default function CreateCourseForm() {
           onChange={(e) => setFormat(e.target.value as "topics" | "weeks" | "singleactivity")}
           className="mt-1 w-full text-[12px] border border-[var(--border)] rounded-md px-2.5 py-1.5"
         >
-          <option value="topics">Secciones personalizadas (el curso se divide en secciones que tú nombras — así están tus "Bloques")</option>
-          <option value="weeks">Secciones semanales (cada sección corresponde a una semana)</option>
-          <option value="singleactivity">Actividad única (el curso muestra solo una actividad)</option>
+          <option value="topics">Secciones personalizadas</option>
+          <option value="weeks">Secciones semanales</option>
+          <option value="singleactivity">Actividad única</option>
         </select>
       </div>
       <div>
-        <label className="text-[11px] font-medium text-[var(--text-secondary)]">Resumen (opcional)</label>
+        <label className="text-[11px] font-medium text-[var(--text-secondary)]">Resumen</label>
         <textarea
           value={summary}
           onChange={(e) => setSummary(e.target.value)}
@@ -123,17 +109,18 @@ export default function CreateCourseForm() {
       {error && <div className="text-[11px] text-red-600">{error}</div>}
 
       <div className="text-[10px] text-[var(--text-tertiary)]">
-        El curso se crea directamente en Moodle y quedas matriculado como docente. Las actividades (tareas, foros, etc.)
-        se agregan después, directamente en Moodle.
+        El nombre corto no se puede cambiar desde aquí — es el identificador único del curso en Moodle.
       </div>
 
-      <button
-        type="submit"
-        disabled={submitting || loadingCategories}
-        className="text-[12px] font-medium px-3 py-1.5 rounded-md bg-[var(--clr-brand2)] text-white disabled:opacity-50"
-      >
-        {submitting ? "Creando curso…" : "Crear curso en Moodle"}
-      </button>
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={submitting}
+          className="text-[12px] font-medium px-3 py-1.5 rounded-md bg-[var(--clr-brand2)] text-white disabled:opacity-50"
+        >
+          {submitting ? "Guardando…" : "Guardar cambios"}
+        </button>
+      </div>
     </form>
   );
 }

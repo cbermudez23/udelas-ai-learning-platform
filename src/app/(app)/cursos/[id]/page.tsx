@@ -95,16 +95,26 @@ export default async function CursoDetallePage({ params }: { params: { id: strin
             </div>
             {course.summary && <p className="text-[11px] mt-2 text-[var(--text-secondary)]">{course.summary}</p>}
           </div>
-          {course.moodleUrl && (
-            <a
-              href={course.moodleUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-md bg-[var(--clr-brand2)] text-white hover:opacity-90 shrink-0"
-            >
-              Abrir en Moodle <ExternalLink className="w-3 h-3" />
-            </a>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            {(isTeacher || session!.user.role === "ADMIN") && course.moodleCourseId && (
+              <Link
+                href={`/cursos/${course.id}/editar`}
+                className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-md border border-[var(--clr-brand2)] text-[var(--clr-brand2)] hover:bg-[#EEF3FF]"
+              >
+                Editar curso
+              </Link>
+            )}
+            {course.moodleUrl && (
+              <a
+                href={course.moodleUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-md bg-[var(--clr-brand2)] text-white hover:opacity-90"
+              >
+                Abrir en Moodle <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+          </div>
         </div>
         {!isTeacher && <div className="mt-3">
           <div className="flex justify-between text-[11px] mb-1">

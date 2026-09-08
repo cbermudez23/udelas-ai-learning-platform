@@ -80,6 +80,7 @@ export interface MoodleCourse {
   visible?: number;
   startdate?: number;
   enddate?: number;
+  format?: string; // 'topics' | 'weeks' | 'singleactivity' | ...
   progress?: number | null; // solo en core_enrol_get_users_courses
   contacts?: { id: number; fullname: string }[];
 }
@@ -262,6 +263,34 @@ export const moodle = {
     });
     if (!r?.[0]) throw new Error("Moodle no devolvió el curso creado.");
     return r[0];
+  },
+
+  /**
+   * Actualiza un curso existente en Moodle (core_course_update_courses).
+   * Solo se envían los campos provistos — el resto queda sin tocar.
+   */
+  updateCourse: async (params: {
+    id: number;
+    fullname?: string;
+    categoryid?: number;
+    summary?: string;
+    format?: string;
+  }): Promise<void> => {
+    const course: Record<string, unknown> = { id: params.id };
+    if (params.fullname !== undefined) course.fullname = params.fullname;
+    if (params.categoryid !== undefined) course.categoryid = params.categoryid;
+    if (params.summary !== undefined) { course.summary = params.summary; course.summaryformat = 1; }
+    if (params.format !== undefined) course.format = params.format;
+    await moodleCall("core_course_update_courses", { courses: [course] });
+  },
+
+  /** Un curso puntual con sus datos actuales (para precargar el formulario de edición). */
+  courseById: async (id: number): Promise<MoodleCourse | null> => {
+    const r = await moodleCall<{ courses: MoodleCourse[] }>("core_course_get_courses_by_field", {
+      field: "id",
+      value: String(id)
+    });
+    return r.courses?.[0] ?? null;
   },
 
   /**
