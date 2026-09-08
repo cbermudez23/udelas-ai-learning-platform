@@ -284,6 +284,7 @@ export const moodle = {
         }
       }
     );
+    console.log("[moodle.saveGrade] Respuesta cruda de mod_assign_save_grade:", JSON.stringify(r));
     return { warnings: r?.warnings ?? [] };
   },
 

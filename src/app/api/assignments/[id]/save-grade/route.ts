@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  console.log(`[save-grade] Petición recibida para assignment=${params.id}`);
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   const assignment = await prisma.assignment.findUnique({ where: { id: params.id }, select: { courseId: true } });
@@ -18,15 +19,18 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   const { moodleUserId, grade, feedback } = await req.json().catch(() => ({}));
+  console.log(`[save-grade] Datos: moodleUserId=${moodleUserId} grade=${grade} feedbackLength=${(feedback || "").length}`);
   if (!moodleUserId || grade === undefined) return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
   const g = Number(grade);
   if (!Number.isFinite(g) || g < 0 || g > 100) return NextResponse.json({ error: "La nota debe estar entre 0 y 100" }, { status: 400 });
 
   try {
+    console.log(`[save-grade] Llamando a saveGradeToMoodle...`);
     const { warning } = await saveGradeToMoodle({ assignmentId: params.id, moodleUserId: Number(moodleUserId), grade: g, feedback: String(feedback || "") });
+    console.log(`[save-grade] Resultado OK. warning=${warning || "(ninguno)"}`);
     return NextResponse.json({ ok: true, warning });
   } catch (e: any) {
-    console.error("Error al guardar calificación en Moodle:", e);
+    console.error("[save-grade] EXCEPCIÓN al guardar calificación en Moodle:", e);
     return NextResponse.json({ error: e.message || "No se pudo guardar en Moodle." }, { status: 500 });
   }
 }

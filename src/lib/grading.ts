@@ -150,6 +150,7 @@ export async function saveGradeToMoodle(opts: {
 }): Promise<{ warning: string | null }> {
   const assignment = await prisma.assignment.findUnique({ where: { id: opts.assignmentId }, include: { course: true } });
   if (!assignment) throw new Error("Tarea no encontrada");
+  console.log(`[grading] moodleAssignId=${assignment.moodleAssignId} moodleUserId=${opts.moodleUserId} grade=${opts.grade}`);
 
   const { warnings } = await moodle.saveGrade({
     moodleAssignId: assignment.moodleAssignId,
@@ -157,15 +158,21 @@ export async function saveGradeToMoodle(opts: {
     grade: opts.grade,
     feedback: opts.feedback
   });
+  console.log(`[grading] mod_assign_save_grade respondió. warnings=${JSON.stringify(warnings)}`);
 
   // Refresca la nota localmente de inmediato (sin esperar al próximo ciclo de sincronización)
   const user = await prisma.user.findUnique({ where: { moodleUserId: opts.moodleUserId } });
   if (user) {
     const enrollment = await prisma.enrollment.findUnique({ where: { userId_courseId: { userId: user.id, courseId: assignment.courseId } } });
     if (enrollment) {
-      const items = await moodle.gradeItems(assignment.course.moodleCourseId!, opts.moodleUserId).catch(() => []);
+      const items = await moodle.gradeItems(assignment.course.moodleCourseId!, opts.moodleUserId).catch((e) => { console.warn("[grading] gradeItems falló:", e.message); return []; });
+      console.log(`[grading] gradeItems tras guardar: ${JSON.stringify(items.map((i: any) => ({ id: i.id, itemname: i.itemname, graderaw: i.graderaw })))}`);
       if (items.length) await syncGrades(enrollment.id, items, newReport());
+    } else {
+      console.warn(`[grading] No se encontró Enrollment local para userId=${user.id} courseId=${assignment.courseId}`);
     }
+  } else {
+    console.warn(`[grading] No se encontró User local con moodleUserId=${opts.moodleUserId}`);
   }
 
   if (warnings.length > 0) {
