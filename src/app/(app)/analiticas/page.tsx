@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { LineChart, Link as LinkIcon } from "lucide-react";
 import Link from "next/link";
 import AnalyticsCharts from "@/components/AnalyticsCharts";
+import ExamProgressChart from "@/components/ExamProgressChart";
 
 export const dynamic = "force-dynamic";
 
@@ -110,6 +111,19 @@ export default async function AnaliticasPage() {
         gradeAverages={gradeAverages}
         agentUsage={agentUsage.length > 0 ? agentUsage : [{ name: "Sin interacciones aún", value: 1 }]}
       />
+
+      {attempts.length > 0 && (
+        <div className="card">
+          <div className="text-[12px] font-medium mb-2">Evolución en Exámenes IA</div>
+          <ExamProgressChart
+            attempts={[...attempts].reverse().map((a) => ({
+              label: a.completedAt.toLocaleDateString("es-PA", { day: "2-digit", month: "2-digit" }),
+              score: Math.round(a.score),
+              examTitle: a.exam.title
+            }))}
+          />
+        </div>
+      )}
 
       {attempts.length > 0 && (
         <div className="card overflow-x-auto">

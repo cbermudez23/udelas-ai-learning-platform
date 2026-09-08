@@ -11,7 +11,8 @@ const EXPECTED_FUNCTIONS = [
   "gradereport_user_get_grade_items", "mod_assign_get_assignments", "mod_forum_get_forums_by_courses",
   "core_completion_get_activities_completion_status", "core_calendar_get_action_events_by_course",
   "core_badges_get_user_badges", "core_completion_get_course_completion_status",
-  "core_competency_list_course_competencies", "tool_lp_data_for_user_competency_summary_in_course"
+  "core_competency_list_course_competencies", "tool_lp_data_for_user_competency_summary_in_course",
+  "mod_assign_get_submissions", "mod_assign_save_grade"
 ];
 
 function Stat({ label, value, sub }: { label: string; value: string | number; sub?: string }) {

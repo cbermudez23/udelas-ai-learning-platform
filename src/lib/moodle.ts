@@ -129,6 +129,29 @@ export interface MoodleEnrolledUser {
   roles?: { roleid: number; shortname: string }[];
 }
 
+export interface MoodleSubmissionFile {
+  filename: string;
+  filepath: string;
+  fileurl: string;
+  filesize: number;
+  mimetype: string;
+}
+export interface MoodleSubmissionPlugin {
+  type: string; // "file" | "onlinetext" | "comments" | ...
+  name: string;
+  fileareas?: { area: string; files?: MoodleSubmissionFile[] }[];
+  editorfields?: { name: string; description: string; text: string; format: number }[];
+}
+export interface MoodleSubmission {
+  id: number;
+  userid: number;
+  attemptnumber: number;
+  timemodified: number;
+  status: string; // "submitted" | "draft" | "new"
+  gradingstatus: string; // "graded" | "notgraded"
+  plugins?: MoodleSubmissionPlugin[];
+}
+
 export interface MoodleAssignment {
   id: number;
   cmid: number;
@@ -219,6 +242,42 @@ export const moodle = {
       { courseids: courseIds, includenotenrolledcourses: 1 }
     );
     return r.courses.flatMap((c) => c.assignments.map((a) => ({ ...a, course: c.id })));
+  },
+
+  /**
+   * Entregas de una tarea (mod_assign_get_submissions). Incluye archivos
+   * adjuntos y texto en línea de cada estudiante que ya entregó.
+   */
+  assignmentSubmissions: async (moodleAssignId: number) => {
+    const r = await moodleCall<{
+      assignments: { assignmentid: number; submissions: MoodleSubmission[] }[];
+    }>("mod_assign_get_submissions", { assignmentids: [moodleAssignId] });
+    return r.assignments?.[0]?.submissions ?? [];
+  },
+
+  /**
+   * Guarda la calificación y retroalimentación de un estudiante en una tarea
+   * (mod_assign_save_grade). Requiere que el token tenga mod/assign:grade.
+   */
+  saveGrade: async (params: {
+    moodleAssignId: number;
+    moodleUserId: number;
+    grade: number; // 0-100
+    feedback: string;
+  }) => {
+    await moodleCall("mod_assign_save_grade", {
+      assignmentid: params.moodleAssignId,
+      userid: params.moodleUserId,
+      grade: params.grade,
+      attemptnumber: -1,
+      addattempt: 0,
+      workflowstate: "graded",
+      applytoall: 0,
+      plugindata: {
+        assignfeedbackcomments_editor: { text: params.feedback, format: 1 },
+        files_filemanager: 0
+      }
+    });
   },
 
   gradeItems: async (courseId: number, moodleUserId: number) => {

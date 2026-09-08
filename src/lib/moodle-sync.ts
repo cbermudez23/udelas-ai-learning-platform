@@ -45,7 +45,7 @@ function warnOnce(report: SyncReport, msg: string) {
   if (!report.errors.includes(msg)) report.errors.push(msg);
 }
 
-function newReport(): SyncReport {
+export function newReport(): SyncReport {
   return { courses: 0, enrollments: 0, contents: 0, assignments: 0, grades: 0, users: 0, documents: 0, errors: [], startedAt: new Date().toISOString() };
 }
 
@@ -231,7 +231,7 @@ async function upsertEnrollment(userId: string, courseId: string, roleInCourse: 
 // Calificaciones, progreso y calendario
 // ---------------------------------------------------------------------------
 
-async function syncGrades(enrollmentId: string, items: MoodleGradeItem[], report: SyncReport) {
+export async function syncGrades(enrollmentId: string, items: MoodleGradeItem[], report: SyncReport) {
   for (const it of items) {
     if (it.graderaw === null || it.graderaw === undefined) continue;
     const max = it.grademax ?? 0;

@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import TeacherCoursePanel from "@/components/TeacherCoursePanel";
+import GradingAssistant from "@/components/GradingAssistant";
 import { buildCourseTeacherSummary } from "@/lib/teacher";
 import { ArrowLeft, ExternalLink, FileText, Link2, MessageSquare, ClipboardList, HelpCircle, Folder, BookOpen, Video, File } from "lucide-react";
 
@@ -122,6 +123,9 @@ export default async function CursoDetallePage({ params }: { params: { id: strin
       </div>
 
       {teacherSummary && <TeacherCoursePanel summary={teacherSummary} />}
+      {isTeacher && course.assignments.length > 0 && (
+        <GradingAssistant assignments={course.assignments.map((a) => ({ id: a.id, name: a.name }))} />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         <div className="lg:col-span-2 space-y-3">
