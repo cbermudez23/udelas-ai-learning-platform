@@ -310,11 +310,11 @@ export const moodle = {
         component: "mod_assign",
         activityid: params.moodleCmid,
         itemnumber: 0,
-        // feedbackformat=1 (FORMAT_HTML) explícito: sin este parámetro, en
-        // pruebas se observó que el texto de retroalimentación no siempre
-        // queda guardado (se confirmó el 9-sep-2026 con un estudiante que
-        // recibió la nota pero no el comentario, mientras que otro sí).
-        grades: [{ studentid: params.moodleUserId, grade: params.grade, str_feedback: params.feedback, feedbackformat: 1 }]
+        // NOTA: se intentó agregar feedbackformat explícito (9-sep-2026) para
+        // que el comentario llegara de forma más confiable, pero Moodle
+        // rechazó la llamada completa con "Valor de parámetro inválido
+        // detectado" — esa función NO acepta esa clave. Se revirtió.
+        grades: [{ studentid: params.moodleUserId, grade: params.grade, str_feedback: params.feedback }]
       }
     );
     console.log("[moodle.saveGrade] Respuesta cruda de core_grades_update_grades:", JSON.stringify(r));
