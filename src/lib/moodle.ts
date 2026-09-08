@@ -286,30 +286,29 @@ export const moodle = {
    * core_grades_update_grades usa la Grading API general de Moodle, evitando
    * por completo ese código.
    *
-   * IMPORTANTE: `activityid` NO es el CMID (course module id). Moodle
-   * reenvía este parámetro directo como `$iteminstance` a la función núcleo
-   * grade_update() (junto con itemmodule="assign"), así que debe ser el
-   * INSTANCE ID de mdl_assign — el mismo id que ya usamos como
-   * moodleAssignId. Enviar el CMID hace que Moodle no encuentre el ítem de
-   * calificación real: la llamada devuelve código 0 ("OK") sin lanzar
-   * error, pero la nota no aparece en ningún lado del libro de
-   * calificaciones. Se confirmó este comportamiento en producción el
-   * 8-sep-2026 (ver conversación "2_Plataforma UDELAS AI Learning").
+   * `activityid` SÍ es el CMID (course module id), NO el instance id.
+   * Confirmado el 8-sep-2026 con el propio error de Moodle al enviar el
+   * instance id: "core_grades_update_grades: ID de módulo de curso no
+   * válida". Moodle internamente resuelve el CMID a un objeto de módulo de
+   * curso vía get_coursemodule_from_id(), y de ahí obtiene el instance id
+   * real para grade_update() — por eso exige un CMID válido, no acepta el
+   * instance id directamente.
    */
   saveGrade: async (params: {
     moodleCourseId: number;
-    moodleAssignId: number; // instance id de mdl_assign — NO el cmid
+    moodleCmid: number; // course module id — confirmado por el propio error de Moodle
     moodleUserId: number;
     grade: number; // 0-100
     feedback: string;
   }): Promise<{ warnings: any[] }> => {
+    console.log(`[moodle.saveGrade] Enviando activityid (CMID)=${params.moodleCmid} courseid=${params.moodleCourseId} studentid=${params.moodleUserId} grade=${params.grade}`);
     const r = await moodleCall<any[] | { warnings?: any[] }>(
       "core_grades_update_grades",
       {
         source: "mod/assign",
         courseid: params.moodleCourseId,
         component: "mod_assign",
-        activityid: params.moodleAssignId,
+        activityid: params.moodleCmid,
         itemnumber: 0,
         grades: [{ studentid: params.moodleUserId, grade: params.grade, str_feedback: params.feedback }]
       }

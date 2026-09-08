@@ -7,9 +7,9 @@
  * (mod_assign_save_grade/mod_assign_save_grades quedaron descartadas: en esta
  * instalación aceptan la llamada sin error pero graban -1 internamente,
  * confirmado con una llamada manual directa a la API, fuera de este código.
- * Además, core_grades_update_grades requiere el instance id de la tarea
- * (moodleAssignId) como `activityid`, no el CMID — ver el comentario en
- * moodle.ts:saveGrade para el detalle.)
+ * core_grades_update_grades requiere el CMID de la tarea (moodleCmid) como
+ * `activityid` — confirmado el 8-sep-2026 por el propio error de Moodle al
+ * probar con el instance id: "ID de módulo de curso no válida".)
  */
 import { prisma } from "@/lib/prisma";
 import { moodle, moodleDownload, type MoodleSubmission } from "@/lib/moodle";
@@ -156,14 +156,17 @@ export async function saveGradeToMoodle(opts: {
 }): Promise<{ warning: string | null }> {
   const assignment = await prisma.assignment.findUnique({ where: { id: opts.assignmentId }, include: { course: true } });
   if (!assignment) throw new Error("Tarea no encontrada");
+  if (!assignment.moodleCmid) {
+    throw new Error('Falta el CMID (identificador de módulo de curso) de esta tarea. Ve al Panel de administración y pulsa "Sincronizar todo Moodle" una vez, luego vuelve a intentarlo.');
+  }
   if (!assignment.course.moodleCourseId) {
     throw new Error("Este curso no tiene un id de Moodle asociado.");
   }
-  console.log(`[grading] moodleCourseId=${assignment.course.moodleCourseId} moodleAssignId=${assignment.moodleAssignId} moodleUserId=${opts.moodleUserId} grade=${opts.grade}`);
+  console.log(`[grading] moodleCourseId=${assignment.course.moodleCourseId} moodleAssignId(instance)=${assignment.moodleAssignId} moodleCmid(activityid real)=${assignment.moodleCmid} url=${assignment.url} moodleUserId=${opts.moodleUserId} grade=${opts.grade}`);
 
   const { warnings } = await moodle.saveGrade({
     moodleCourseId: assignment.course.moodleCourseId,
-    moodleAssignId: assignment.moodleAssignId,
+    moodleCmid: assignment.moodleCmid,
     moodleUserId: opts.moodleUserId,
     grade: opts.grade,
     feedback: opts.feedback

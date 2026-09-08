@@ -112,7 +112,7 @@ model Assignment {
   id             String    @id @default(cuid())
   courseId       String
   moodleAssignId Int       @unique // instance id de mdl_assign (para leer entregas)
-  moodleCmid     Int?      // course module id (solo para construir URLs directas a la tarea en Moodle; NO usar para core_grades_update_grades, que espera el instance id/moodleAssignId)
+  moodleCmid     Int?      // course module id — usado como `activityid` en core_grades_update_grades (confirmado por el propio error de Moodle) y para construir URLs directas a la tarea
   name           String
   intro          String?
   dueDate        DateTime?
