@@ -281,29 +281,34 @@ export const moodle = {
     moodleUserId: number;
     grade: number; // 0-100
     feedback: string;
-    attemptNumber: number; // número de intento REAL de la entrega (no -1): ver nota abajo
+    attemptNumber: number; // número de intento REAL de la entrega
   }): Promise<{ warnings: { item?: string; warningcode: string; message: string }[] }> => {
+    // Se usa la función PLURAL (mod_assign_save_grades), no la singular
+    // (mod_assign_save_grade): en pruebas reales la singular acepta la llamada
+    // sin error pero graba el grade como -1 ("sin calificar") en assign_grades;
+    // la plural, con una estructura de parámetros distinta (grades: [...]),
+    // tiene mejor evidencia de funcionar correctamente vía API REST.
     const r = await moodleCall<{ warnings?: { item?: string; warningcode: string; message: string }[] }>(
-      "mod_assign_save_grade",
+      "mod_assign_save_grades",
       {
         assignmentid: params.moodleAssignId,
-        userid: params.moodleUserId,
-        grade: params.grade,
-        attemptnumber: params.attemptNumber,
-        addattempt: 0,
-        // Cadena vacía: "graded" solo tiene sentido si la tarea usa el flujo de
-        // trabajo de calificación (marking workflow). En una tarea SIN flujo de
-        // trabajo (nuestro caso), enviar un valor no vacío puede hacer que
-        // Moodle entre en una rama de código que descarta el grade silenciosamente.
-        workflowstate: "",
         applytoall: 0,
-        plugindata: {
-          assignfeedbackcomments_editor: { text: params.feedback, format: 1 },
-          files_filemanager: 0
-        }
+        grades: [
+          {
+            userid: params.moodleUserId,
+            grade: params.grade,
+            attemptnumber: params.attemptNumber,
+            addattempt: 0,
+            workflowstate: "",
+            plugindata: {
+              assignfeedbackcomments_editor: { text: params.feedback, format: 1 },
+              files_filemanager: 0
+            }
+          }
+        ]
       }
     );
-    console.log("[moodle.saveGrade] Respuesta cruda de mod_assign_save_grade:", JSON.stringify(r));
+    console.log("[moodle.saveGrade] Respuesta cruda de mod_assign_save_grades:", JSON.stringify(r));
     return { warnings: r?.warnings ?? [] };
   },
 
