@@ -291,7 +291,11 @@ export const moodle = {
         grade: params.grade,
         attemptnumber: params.attemptNumber,
         addattempt: 0,
-        workflowstate: "graded",
+        // Cadena vacía: "graded" solo tiene sentido si la tarea usa el flujo de
+        // trabajo de calificación (marking workflow). En una tarea SIN flujo de
+        // trabajo (nuestro caso), enviar un valor no vacío puede hacer que
+        // Moodle entre en una rama de código que descarta el grade silenciosamente.
+        workflowstate: "",
         applytoall: 0,
         plugindata: {
           assignfeedbackcomments_editor: { text: params.feedback, format: 1 },
