@@ -267,6 +267,7 @@ export const moodle = {
     moodleUserId: number;
     grade: number; // 0-100
     feedback: string;
+    attemptNumber: number; // número de intento REAL de la entrega (no -1): ver nota abajo
   }): Promise<{ warnings: { item?: string; warningcode: string; message: string }[] }> => {
     const r = await moodleCall<{ warnings?: { item?: string; warningcode: string; message: string }[] }>(
       "mod_assign_save_grade",
@@ -274,7 +275,7 @@ export const moodle = {
         assignmentid: params.moodleAssignId,
         userid: params.moodleUserId,
         grade: params.grade,
-        attemptnumber: -1,
+        attemptnumber: params.attemptNumber,
         addattempt: 0,
         workflowstate: "graded",
         applytoall: 0,

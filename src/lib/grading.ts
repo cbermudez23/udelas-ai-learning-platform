@@ -150,13 +150,21 @@ export async function saveGradeToMoodle(opts: {
 }): Promise<{ warning: string | null }> {
   const assignment = await prisma.assignment.findUnique({ where: { id: opts.assignmentId }, include: { course: true } });
   if (!assignment) throw new Error("Tarea no encontrada");
-  console.log(`[grading] moodleAssignId=${assignment.moodleAssignId} moodleUserId=${opts.moodleUserId} grade=${opts.grade}`);
+
+  // Se pasa el número de intento REAL de la entrega (no -1): con -1 ("último intento")
+  // Moodle acepta la llamada sin error pero, si no existe aún un registro de calificación
+  // para esa combinación usuario+tarea, puede no aplicar la nota.
+  const subs = await moodle.assignmentSubmissions(assignment.moodleAssignId);
+  const sub = subs.find((s) => s.userid === opts.moodleUserId);
+  const attemptNumber = sub?.attemptnumber ?? 0;
+  console.log(`[grading] moodleAssignId=${assignment.moodleAssignId} moodleUserId=${opts.moodleUserId} grade=${opts.grade} attemptNumber=${attemptNumber} (submission encontrada: ${!!sub})`);
 
   const { warnings } = await moodle.saveGrade({
     moodleAssignId: assignment.moodleAssignId,
     moodleUserId: opts.moodleUserId,
     grade: opts.grade,
-    feedback: opts.feedback
+    feedback: opts.feedback,
+    attemptNumber
   });
   console.log(`[grading] mod_assign_save_grade respondió. warnings=${JSON.stringify(warnings)}`);
 
