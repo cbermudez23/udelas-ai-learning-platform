@@ -97,7 +97,7 @@ export default function CalendarGrid({ events }: { events: CalEvent[] }) {
             .map((e) => (
               <div
                 key={e.id}
-                className="flex items-center gap-2 p-1.5 rounded-md bg-[var(--bg-secondary)]"
+                className="flex items-start gap-2 p-1.5 rounded-md bg-[var(--bg-secondary)]"
               >
                 <div
                   className="w-8 h-8 rounded-md flex flex-col items-center justify-center shrink-0"
@@ -111,9 +111,9 @@ export default function CalendarGrid({ events }: { events: CalEvent[] }) {
                   </div>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[11px] font-medium truncate">{e.title}</div>
+                  <div className="text-[11px] font-medium">{e.title}</div>
                   {e.detail && (
-                    <div className="text-[10px] text-[var(--text-tertiary)] truncate">{e.detail}</div>
+                    <div className="text-[10px] text-[var(--text-tertiary)]" style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}>{e.detail}</div>
                   )}
                 </div>
               </div>

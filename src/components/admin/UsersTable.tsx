@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { KeyRound, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 type Row = {
@@ -68,7 +69,7 @@ export default function UsersTable({ users, currentUserId }: { users: Row[]; cur
           <tbody>
             {list.map((u) => (
               <tr key={u.id} className="border-t border-[var(--border-tertiary)]">
-                <td className="px-3 py-2 font-medium max-w-[180px]">
+                <td className="px-3 py-2 font-medium max-w-[100px] sm:max-w-[180px]">
                   <div className="truncate">{u.name}{u.id === currentUserId && <span className="text-[var(--text-tertiary)]"> (tú)</span>}</div>
                   {/* Subtexto con todos los datos extra, visible solo en móvil */}
                   <div className="sm:hidden text-[10px] text-[var(--text-tertiary)] space-y-0.5 mt-0.5">
@@ -85,7 +86,7 @@ export default function UsersTable({ users, currentUserId }: { users: Row[]; cur
                   <select
                     value={u.role} disabled={busy === u.id || u.id === currentUserId}
                     onChange={(e) => changeRole(u, e.target.value)}
-                    className="border border-[var(--border-tertiary)] rounded px-1.5 py-0.5 bg-white text-[11px] max-w-[110px]"
+                    className="border border-[var(--border-tertiary)] rounded px-1 py-0.5 bg-white text-[10px] sm:text-[11px] w-[88px] sm:w-[110px]"
                   >
                     {Object.entries(ROLE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
@@ -98,8 +99,14 @@ export default function UsersTable({ users, currentUserId }: { users: Row[]; cur
                 <td className="px-3 py-2 text-right hidden md:table-cell">{u.enrollments}</td>
                 <td className="px-3 py-2 text-right hidden lg:table-cell">{u.messages}</td>
                 <td className="px-3 py-2 text-right whitespace-nowrap">
-                  <button onClick={() => resetPassword(u)} disabled={busy === u.id} className="text-[var(--clr-brand2)] hover:underline mr-2 whitespace-nowrap"><span className="hidden sm:inline">Contraseña</span><span className="sm:hidden">Clave</span></button>
-                  <button onClick={() => remove(u)} disabled={busy === u.id || u.id === currentUserId} className="text-[#B91C1C] hover:underline disabled:opacity-40 whitespace-nowrap">Eliminar</button>
+                  <button onClick={() => resetPassword(u)} disabled={busy === u.id} title="Restablecer contraseña" className="text-[var(--clr-brand2)] hover:underline mr-1.5 sm:mr-2 inline-flex items-center">
+                    <KeyRound className="w-3.5 h-3.5 sm:hidden" />
+                    <span className="hidden sm:inline">Contraseña</span>
+                  </button>
+                  <button onClick={() => remove(u)} disabled={busy === u.id || u.id === currentUserId} title="Eliminar" className="text-[#B91C1C] hover:underline disabled:opacity-40 inline-flex items-center">
+                    <Trash2 className="w-3.5 h-3.5 sm:hidden" />
+                    <span className="hidden sm:inline">Eliminar</span>
+                  </button>
                 </td>
               </tr>
             ))}

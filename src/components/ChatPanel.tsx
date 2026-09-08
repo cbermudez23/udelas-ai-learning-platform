@@ -90,7 +90,7 @@ export default function ChatPanel({
 
       <div
         ref={scrollRef}
-        className="h-[280px] overflow-y-auto p-2.5 flex flex-col gap-2 bg-[var(--bg-secondary)] rounded-lg mb-2.5"
+        className="h-[280px] overflow-y-auto overflow-x-hidden p-2.5 flex flex-col gap-2 bg-[var(--bg-secondary)] rounded-lg mb-2.5"
       >
         {loaded && messages.length === 0 && (
           <div className="max-w-[88%] px-3 py-2 rounded-lg text-[12px] leading-relaxed bg-white border border-[var(--border-tertiary)] self-start rounded-bl-sm">
@@ -100,7 +100,7 @@ export default function ChatPanel({
         {messages.map((m, i) => (
           <div
             key={i}
-            className={`max-w-[88%] px-3 py-2 rounded-lg text-[12px] leading-relaxed ${
+            className={`max-w-[88%] min-w-0 px-3 py-2 rounded-lg text-[12px] leading-relaxed ${
               m.role === "user"
                 ? "bg-[var(--clr-brand2)] text-white self-end rounded-br-sm whitespace-pre-wrap"
                 : "bg-white border border-[var(--border-tertiary)] self-start rounded-bl-sm chat-md"
