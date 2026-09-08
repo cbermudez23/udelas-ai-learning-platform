@@ -23,8 +23,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!Number.isFinite(g) || g < 0 || g > 100) return NextResponse.json({ error: "La nota debe estar entre 0 y 100" }, { status: 400 });
 
   try {
-    await saveGradeToMoodle({ assignmentId: params.id, moodleUserId: Number(moodleUserId), grade: g, feedback: String(feedback || "") });
-    return NextResponse.json({ ok: true });
+    const { warning } = await saveGradeToMoodle({ assignmentId: params.id, moodleUserId: Number(moodleUserId), grade: g, feedback: String(feedback || "") });
+    return NextResponse.json({ ok: true, warning });
   } catch (e: any) {
     console.error("Error al guardar calificación en Moodle:", e);
     return NextResponse.json({ error: e.message || "No se pudo guardar en Moodle." }, { status: 500 });

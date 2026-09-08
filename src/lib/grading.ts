@@ -142,17 +142,16 @@ Da una calificación de 0 a 100 y retroalimentación constructiva. Sé justo per
   }
 }
 
-/** Guarda la calificación final (ya revisada por el docente) en Moodle y refresca la nota local. */
 export async function saveGradeToMoodle(opts: {
   assignmentId: string;
   moodleUserId: number;
   grade: number;
   feedback: string;
-}): Promise<void> {
+}): Promise<{ warning: string | null }> {
   const assignment = await prisma.assignment.findUnique({ where: { id: opts.assignmentId }, include: { course: true } });
   if (!assignment) throw new Error("Tarea no encontrada");
 
-  await moodle.saveGrade({
+  const { warnings } = await moodle.saveGrade({
     moodleAssignId: assignment.moodleAssignId,
     moodleUserId: opts.moodleUserId,
     grade: opts.grade,
@@ -168,4 +167,11 @@ export async function saveGradeToMoodle(opts: {
       if (items.length) await syncGrades(enrollment.id, items, newReport());
     }
   }
+
+  if (warnings.length > 0) {
+    console.warn("mod_assign_save_grade devolvió warnings:", warnings);
+    const msg = warnings.map((w) => w.message).join(" ");
+    return { warning: `Moodle indicó: "${msg}". Es posible que esta tarea tenga activada una "calificación avanzada" (rúbrica o guía dentro de Moodle) que impide fijar la nota directamente; el comentario sí se guarda, pero verifica la nota en Moodle.` };
+  }
+  return { warning: null };
 }

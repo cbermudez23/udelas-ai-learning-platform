@@ -258,26 +258,33 @@ export const moodle = {
   /**
    * Guarda la calificación y retroalimentación de un estudiante en una tarea
    * (mod_assign_save_grade). Requiere que el token tenga mod/assign:grade.
+   * Moodle no lanza error HTTP cuando algo no se aplica (p. ej. si la tarea
+   * usa "calificación avanzada" en vez de calificación directa): en su lugar
+   * devuelve un array de "warnings" que hay que revisar explícitamente.
    */
   saveGrade: async (params: {
     moodleAssignId: number;
     moodleUserId: number;
     grade: number; // 0-100
     feedback: string;
-  }) => {
-    await moodleCall("mod_assign_save_grade", {
-      assignmentid: params.moodleAssignId,
-      userid: params.moodleUserId,
-      grade: params.grade,
-      attemptnumber: -1,
-      addattempt: 0,
-      workflowstate: "graded",
-      applytoall: 0,
-      plugindata: {
-        assignfeedbackcomments_editor: { text: params.feedback, format: 1 },
-        files_filemanager: 0
+  }): Promise<{ warnings: { item?: string; warningcode: string; message: string }[] }> => {
+    const r = await moodleCall<{ warnings?: { item?: string; warningcode: string; message: string }[] }>(
+      "mod_assign_save_grade",
+      {
+        assignmentid: params.moodleAssignId,
+        userid: params.moodleUserId,
+        grade: params.grade,
+        attemptnumber: -1,
+        addattempt: 0,
+        workflowstate: "graded",
+        applytoall: 0,
+        plugindata: {
+          assignfeedbackcomments_editor: { text: params.feedback, format: 1 },
+          files_filemanager: 0
+        }
       }
-    });
+    );
+    return { warnings: r?.warnings ?? [] };
   },
 
   gradeItems: async (courseId: number, moodleUserId: number) => {

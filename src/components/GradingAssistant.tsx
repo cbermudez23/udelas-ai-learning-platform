@@ -78,6 +78,7 @@ export default function GradingAssistant({ assignments }: { assignments: { id: s
       else {
         setSavedIds((s) => new Set(s).add(selected.moodleUserId));
         setSubmissions((list) => list?.map((s) => s.moodleUserId === selected.moodleUserId ? { ...s, gradingStatus: "graded" } : s) ?? null);
+        if (d.warning) setError(d.warning); // aviso de Moodle, no un fallo de la Plataforma
       }
     } catch (e: any) { setError(e.message); } finally { setSaving(false); }
   }
