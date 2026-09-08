@@ -66,29 +66,39 @@ export default function CoursesTable({ courses }: { courses: Row[] }) {
         <table className="w-full text-[11px]">
           <thead className="text-left text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">
             <tr>
-              <th className="px-3 py-2">Curso</th><th className="px-3 py-2">Categoría</th><th className="px-3 py-2">Docente</th>
-              <th className="px-3 py-2">Origen</th><th className="px-3 py-2 text-right">Matrículas</th><th className="px-3 py-2 text-right">Contenidos</th>
-              <th className="px-3 py-2 text-right">Tareas</th><th className="px-3 py-2">Última sincronización</th><th className="px-3 py-2 text-right">Acciones</th>
+              <th className="px-3 py-2">Curso</th>
+              <th className="px-3 py-2 hidden md:table-cell">Categoría</th>
+              <th className="px-3 py-2 hidden sm:table-cell">Docente</th>
+              <th className="px-3 py-2">Origen</th>
+              <th className="px-3 py-2 text-right hidden sm:table-cell">Mat.</th>
+              <th className="px-3 py-2 text-right hidden md:table-cell">Cont.</th>
+              <th className="px-3 py-2 text-right hidden md:table-cell">Tar.</th>
+              <th className="px-3 py-2 hidden lg:table-cell">Última sincronización</th>
+              <th className="px-3 py-2 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {courses.map((c) => (
               <tr key={c.id} className="border-t border-[var(--border-tertiary)]">
-                <td className="px-3 py-2 font-medium">
-                  {c.moodleUrl ? <a href={c.moodleUrl} target="_blank" rel="noreferrer" className="hover:text-[var(--clr-brand2)]">{c.name}</a> : c.name}
-                  {c.shortName && <span className="text-[var(--text-tertiary)] font-normal"> · {c.shortName}</span>}
+                <td className="px-3 py-2 font-medium max-w-[180px]">
+                  <div className="truncate">{c.moodleUrl ? <a href={c.moodleUrl} target="_blank" rel="noreferrer" className="hover:text-[var(--clr-brand2)]">{c.name}</a> : c.name}{c.shortName && <span className="text-[var(--text-tertiary)] font-normal text-[10px]"> · {c.shortName}</span>}</div>
+                  <div className="sm:hidden text-[10px] text-[var(--text-tertiary)] mt-0.5 space-y-0.5">
+                    <div className="truncate">{c.professorName}</div>
+                    <div>{c.enrollments} mat. · {c.contents} cont. · {c.assignments} tar.</div>
+                    {c.lastSyncedAt && <div>{new Date(c.lastSyncedAt).toLocaleDateString("es-PA")}</div>}
+                  </div>
                 </td>
-                <td className="px-3 py-2">{c.category}</td>
-                <td className="px-3 py-2 text-[var(--text-secondary)]">{c.professorName}</td>
+                <td className="px-3 py-2 hidden md:table-cell">{c.category}</td>
+                <td className="px-3 py-2 text-[var(--text-secondary)] hidden sm:table-cell">{c.professorName}</td>
                 <td className="px-3 py-2">
                   {c.source === "MOODLE"
                     ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#FDF3E3] text-[#B45309]">Moodle</span>
                     : <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#EEF3FF] text-[var(--clr-brand2)]">Local / demo</span>}
                 </td>
-                <td className="px-3 py-2 text-right">{c.enrollments}</td>
-                <td className="px-3 py-2 text-right">{c.contents}</td>
-                <td className="px-3 py-2 text-right">{c.assignments}</td>
-                <td className="px-3 py-2 text-[var(--text-tertiary)]">{c.lastSyncedAt ? new Date(c.lastSyncedAt).toLocaleString("es-PA") : "—"}</td>
+                <td className="px-3 py-2 text-right hidden sm:table-cell">{c.enrollments}</td>
+                <td className="px-3 py-2 text-right hidden md:table-cell">{c.contents}</td>
+                <td className="px-3 py-2 text-right hidden md:table-cell">{c.assignments}</td>
+                <td className="px-3 py-2 text-[var(--text-tertiary)] hidden lg:table-cell">{c.lastSyncedAt ? new Date(c.lastSyncedAt).toLocaleString("es-PA") : "—"}</td>
                 <td className="px-3 py-2 text-right">
                   <button
                     onClick={() => confirm(`¿Eliminar "${c.name}" de esta plataforma (con sus matrículas y notas)?${c.source === "MOODLE" ? " Volverá a aparecer en la próxima sincronización si sigue existiendo en Moodle." : ""}`) && del({ id: c.id }, `"${c.name}" eliminado.`, c.id)}

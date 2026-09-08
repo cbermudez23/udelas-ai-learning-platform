@@ -75,21 +75,26 @@ export default async function AdminAnalitica() {
       {faculties.map((f) => (
         <div key={f} className="card overflow-x-auto">
           <div className="text-[12px] font-semibold mb-2">{f}</div>
-          <table className="w-full text-[11px] min-w-[640px]">
+          <table className="w-full text-[11px]">
             <thead className="text-left text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">
-              <tr><th className="py-1.5 pr-2">Programa</th><th className="py-1.5 pr-2 text-right">Cursos</th><th className="py-1.5 pr-2 text-right">Docentes</th><th className="py-1.5 pr-2 w-[220px]">Estudiantes</th><th className="py-1.5 pr-2 text-right">Promedio</th><th className="py-1.5 pr-2 text-right">En riesgo</th><th className="py-1.5 pr-2 text-right">Mensajes IA (30 d)</th><th className="py-1.5 text-right">Materiales</th></tr>
+              <tr><th className="py-1.5 pr-2">Programa</th><th className="py-1.5 pr-2 text-right hidden sm:table-cell">Cursos</th><th className="py-1.5 pr-2 text-right hidden md:table-cell">Doc.</th><th className="py-1.5 pr-2 hidden sm:table-cell">Estudiantes</th><th className="py-1.5 pr-2 text-right">Promedio</th><th className="py-1.5 pr-2 text-right">Riesgo</th><th className="py-1.5 pr-2 text-right hidden md:table-cell">Msj. IA</th><th className="py-1.5 text-right hidden lg:table-cell">Mat.</th></tr>
             </thead>
             <tbody>
               {rows.filter((r) => r.faculty === f).map((r) => (
                 <tr key={r.key} className="border-t border-[var(--border-tertiary)]">
-                  <td className="py-1.5 pr-2 font-medium">{r.program}</td>
-                  <td className="py-1.5 pr-2 text-right">{r.courses}</td>
-                  <td className="py-1.5 pr-2 text-right">{r.teacherCount}</td>
-                  <td className="py-1.5 pr-2"><div className="flex items-center gap-2"><div className="prog-bar flex-1"><div className="prog-fill" style={{ width: `${(r.studentCount / maxStudents) * 100}%` }} /></div><span className="w-8 text-right">{r.studentCount}</span></div></td>
+                  <td className="py-1.5 pr-2 font-medium">
+                    <div>{r.program}</div>
+                    <div className="sm:hidden text-[10px] text-[var(--text-tertiary)] mt-0.5">
+                      {r.courses} cur. · {r.teacherCount} doc. · {r.studentCount} est. · {r.messages} msj.
+                    </div>
+                  </td>
+                  <td className="py-1.5 pr-2 text-right hidden sm:table-cell">{r.courses}</td>
+                  <td className="py-1.5 pr-2 text-right hidden md:table-cell">{r.teacherCount}</td>
+                  <td className="py-1.5 pr-2 hidden sm:table-cell"><div className="flex items-center gap-2"><div className="prog-bar flex-1"><div className="prog-fill" style={{ width: `${(r.studentCount / maxStudents) * 100}%` }} /></div><span className="w-8 text-right">{r.studentCount}</span></div></td>
                   <td className="py-1.5 pr-2 text-right">{r.avg !== null ? `${r.avg}%` : "—"}</td>
                   <td className={`py-1.5 pr-2 text-right ${r.atRisk ? "text-[#B91C1C] font-medium" : ""}`}>{r.atRisk}</td>
-                  <td className="py-1.5 pr-2 text-right">{r.messages}</td>
-                  <td className="py-1.5 text-right">{r.documents}</td>
+                  <td className="py-1.5 pr-2 text-right hidden md:table-cell">{r.messages}</td>
+                  <td className="py-1.5 text-right hidden lg:table-cell">{r.documents}</td>
                 </tr>
               ))}
             </tbody>
@@ -102,17 +107,20 @@ export default async function AdminAnalitica() {
           <div className="px-3 py-2 text-[12px] font-medium border-b border-[var(--border-tertiary)]">Detalle por curso</div>
           <table className="w-full text-[11px]">
             <thead className="text-left text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">
-              <tr><th className="px-3 py-2">Curso</th><th className="px-3 py-2">Facultad / Programa</th><th className="px-3 py-2 text-right">Estudiantes</th><th className="px-3 py-2 text-right">Promedio</th><th className="px-3 py-2 text-right">En riesgo</th><th className="px-3 py-2 text-right">Materiales</th></tr>
+              <tr><th className="px-3 py-2">Curso</th><th className="px-3 py-2 hidden sm:table-cell">Facultad / Programa</th><th className="px-3 py-2 text-right hidden sm:table-cell">Est.</th><th className="px-3 py-2 text-right">Promedio</th><th className="px-3 py-2 text-right">Riesgo</th><th className="px-3 py-2 text-right hidden md:table-cell">Mat.</th></tr>
             </thead>
             <tbody>
               {courseRows.map((c) => (
                 <tr key={c.name} className="border-t border-[var(--border-tertiary)]">
-                  <td className="px-3 py-2 font-medium">{c.name}</td>
-                  <td className="px-3 py-2 text-[var(--text-secondary)]">{c.faculty} / {c.program}</td>
-                  <td className="px-3 py-2 text-right">{c.students}</td>
+                  <td className="px-3 py-2 font-medium max-w-[160px]">
+                    <div className="truncate">{c.name}</div>
+                    <div className="sm:hidden text-[10px] text-[var(--text-tertiary)] truncate">{c.faculty} / {c.program} · {c.students} est.</div>
+                  </td>
+                  <td className="px-3 py-2 text-[var(--text-secondary)] hidden sm:table-cell max-w-[140px]"><div className="truncate">{c.faculty} / {c.program}</div></td>
+                  <td className="px-3 py-2 text-right hidden sm:table-cell">{c.students}</td>
                   <td className="px-3 py-2 text-right">{c.avg !== null ? `${c.avg}%` : "—"}</td>
                   <td className={`px-3 py-2 text-right ${c.atRisk ? "text-[#B91C1C] font-medium" : ""}`}>{c.atRisk}</td>
-                  <td className="px-3 py-2 text-right">{c.docs}</td>
+                  <td className="px-3 py-2 text-right hidden md:table-cell">{c.docs}</td>
                 </tr>
               ))}
             </tbody>

@@ -91,14 +91,20 @@ export default async function AdminHome() {
       <div className="card overflow-x-auto">
         <div className="text-[12px] font-medium mb-2">Últimas sincronizaciones</div>
         {lastRuns.length === 0 && <div className="text-[11px] text-[var(--text-tertiary)]">Aún no hay sincronizaciones registradas.</div>}
-        <table className="w-full text-[11px] min-w-[560px]">
+        <table className="w-full text-[11px]">
           <tbody>
             {lastRuns.map((r) => (
               <tr key={r.id} className="border-t border-[var(--border-tertiary)]">
-                <td className="py-1.5 pr-2 whitespace-nowrap text-[var(--text-tertiary)]">{r.startedAt.toLocaleString("es-PA")}</td>
-                <td className="py-1.5 pr-2">{r.scope === "all" ? "Todo Moodle" : "Usuario"}</td>
-                <td className="py-1.5 pr-2 text-[var(--text-tertiary)]">{r.triggeredBy}</td>
-                <td className="py-1.5 pr-2">{r.summary}</td>
+                <td className="py-1.5 pr-2 max-w-[200px]">
+                  <div className="text-[10px] text-[var(--text-tertiary)] whitespace-nowrap">{r.startedAt.toLocaleString("es-PA")}</div>
+                  <div className="sm:hidden text-[10px] text-[var(--text-tertiary)] mt-0.5">
+                    <div>{r.scope === "all" ? "Todo Moodle" : "Usuario"} · {r.triggeredBy}</div>
+                    <div className="truncate">{r.summary}</div>
+                  </div>
+                </td>
+                <td className="py-1.5 pr-2 hidden sm:table-cell">{r.scope === "all" ? "Todo Moodle" : "Usuario"}</td>
+                <td className="py-1.5 pr-2 text-[var(--text-tertiary)] hidden sm:table-cell max-w-[120px]"><div className="truncate">{r.triggeredBy}</div></td>
+                <td className="py-1.5 pr-2 hidden sm:table-cell max-w-[180px]"><div className="truncate">{r.summary}</div></td>
                 <td className={`py-1.5 ${r.ok ? "text-[#166534]" : "text-[#B45309]"}`} title={r.errors || ""}>{r.ok ? "OK" : "Con avisos"}</td>
               </tr>
             ))}

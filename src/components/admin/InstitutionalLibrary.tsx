@@ -73,17 +73,29 @@ export default function InstitutionalLibrary({ docs, moodleCount }: { docs: Row[
       <div className="card p-0 overflow-x-auto">
         <table className="w-full text-[11px]">
           <thead className="text-left text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">
-            <tr><th className="px-3 py-2">Documento</th><th className="px-3 py-2">Tipo</th><th className="px-3 py-2">Etiquetas</th><th className="px-3 py-2 text-right">Fragmentos</th><th className="px-3 py-2">Cargado</th><th className="px-3 py-2 text-right">Acciones</th></tr>
+            <tr><th className="px-3 py-2">Documento</th><th className="px-3 py-2 hidden sm:table-cell">Tipo</th><th className="px-3 py-2 hidden md:table-cell">Etiquetas</th><th className="px-3 py-2 text-right hidden sm:table-cell">Frag.</th><th className="px-3 py-2 hidden md:table-cell">Cargado</th><th className="px-3 py-2 text-right">Acciones</th></tr>
           </thead>
           <tbody>
             {docs.length === 0 && <tr><td colSpan={6} className="px-3 py-3 text-[var(--text-tertiary)]">Aún no hay materiales institucionales.</td></tr>}
             {docs.map((r) => (
               <tr key={r.id} className="border-t border-[var(--border-tertiary)]">
-                <td className="px-3 py-2 font-medium"><span className="inline-flex items-center gap-1.5"><FileText className="w-3.5 h-3.5 text-[var(--clr-brand2)]" />{r.title}</span>{r.fileName && <div className="text-[10px] text-[var(--text-tertiary)] font-normal">{r.fileName}</div>}</td>
-                <td className="px-3 py-2">{TYPE_LABEL[r.type] || r.type}</td>
-                <td className="px-3 py-2 text-[var(--text-tertiary)]">{r.tags.join(", ")}</td>
-                <td className="px-3 py-2 text-right">{r.chunks}</td>
-                <td className="px-3 py-2 text-[var(--text-tertiary)]">{new Date(r.createdAt).toLocaleDateString("es-PA")}</td>
+                <td className="px-3 py-2 font-medium max-w-[180px]">
+                <span className="inline-flex items-start gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-[var(--clr-brand2)] shrink-0 mt-0.5" />
+                  <span className="min-w-0">
+                    <span className="block truncate">{r.title}</span>
+                    {r.fileName && <span className="block text-[10px] text-[var(--text-tertiary)] truncate">{r.fileName}</span>}
+                    <span className="sm:hidden block text-[10px] text-[var(--text-tertiary)] mt-0.5">
+                      {TYPE_LABEL[r.type] || r.type} · {r.chunks} fragmento(s) · {new Date(r.createdAt).toLocaleDateString("es-PA")}
+                      {r.tags.length > 0 && <span> · {r.tags.join(", ")}</span>}
+                    </span>
+                  </span>
+                </span>
+              </td>
+                <td className="px-3 py-2 hidden sm:table-cell">{TYPE_LABEL[r.type] || r.type}</td>
+                <td className="px-3 py-2 text-[var(--text-tertiary)] hidden md:table-cell">{r.tags.join(", ")}</td>
+                <td className="px-3 py-2 text-right hidden sm:table-cell">{r.chunks}</td>
+                <td className="px-3 py-2 text-[var(--text-tertiary)] hidden md:table-cell">{new Date(r.createdAt).toLocaleDateString("es-PA")}</td>
                 <td className="px-3 py-2 text-right"><button onClick={() => remove(r)} disabled={busy} className="text-[#B91C1C] hover:underline inline-flex items-center gap-1"><Trash2 className="w-3 h-3" /> Eliminar</button></td>
               </tr>
             ))}

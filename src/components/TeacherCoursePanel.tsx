@@ -25,21 +25,35 @@ export default function TeacherCoursePanel({ summary }: { summary: CourseTeacher
           <table className="w-full text-[11px]">
             <thead className="text-left text-[10px] uppercase tracking-wide text-[var(--text-tertiary)]">
               <tr>
-                <th className="px-3 py-2">Estudiante</th><th className="px-3 py-2">Progreso</th>
-                <th className="px-3 py-2 text-right">Nota total</th><th className="px-3 py-2 text-right">Ítems calificados</th>
-                <th className="px-3 py-2">Estado</th>
+                <th className="px-3 py-2">Estudiante</th>
+                <th className="px-3 py-2 hidden sm:table-cell">Progreso</th>
+                <th className="px-3 py-2 text-right">Nota</th>
+                <th className="px-3 py-2 text-right hidden md:table-cell">Ítems</th>
+                <th className="px-3 py-2 hidden sm:table-cell">Estado</th>
               </tr>
             </thead>
             <tbody>
               {s.students.map((st) => (
                 <tr key={st.userId} className={`border-t border-[var(--border-tertiary)] ${st.atRisk ? "bg-[#FFF7F7]" : ""}`}>
-                  <td className="px-3 py-2"><div className="font-medium">{st.name}</div><div className="text-[10px] text-[var(--text-tertiary)]">{st.email}</div></td>
-                  <td className="px-3 py-2 w-[140px]">
+                  <td className="px-3 py-2 max-w-[160px]">
+                    <div className="font-medium truncate">{st.name}</div>
+                    <div className="text-[10px] text-[var(--text-tertiary)] truncate">{st.email}</div>
+                    {/* Subtexto visible solo en móvil (<sm) */}
+                    <div className="sm:hidden text-[10px] mt-0.5 space-y-0.5">
+                      <div className="flex gap-2">
+                        <span>{st.progressPercent}%</span>
+                        <span className={st.total !== null && st.total < 71 ? "text-[#B91C1C] font-medium" : ""}>{st.total !== null ? `${st.total}%` : "—"}</span>
+                        <span className={st.atRisk ? "text-[#B91C1C]" : "text-[#166534]"}>{st.atRisk ? "⚠ En riesgo" : "✓ Al día"}</span>
+                      </div>
+                      {st.atRisk && <div className="text-[var(--text-tertiary)]">{st.riskReasons.join(" · ")}</div>}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 w-[140px] hidden sm:table-cell">
                     <div className="flex items-center gap-2"><div className="prog-bar flex-1"><div className="prog-fill" style={{ width: `${st.progressPercent}%` }} /></div><span className="text-[10px] w-8 text-right">{st.progressPercent}%</span></div>
                   </td>
                   <td className={`px-3 py-2 text-right font-medium ${st.atRisk && st.riskReasons.some((r) => r.startsWith("Nota")) ? "text-[#B91C1C]" : ""}`}>{st.total !== null ? `${st.total}%` : "—"}</td>
-                  <td className="px-3 py-2 text-right">{st.gradedCount}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2 text-right hidden md:table-cell">{st.gradedCount}</td>
+                  <td className="px-3 py-2 hidden sm:table-cell">
                     {st.atRisk
                       ? <div><span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#FDEAEA] text-[#B91C1C] font-medium">En riesgo</span><div className="text-[10px] text-[var(--text-tertiary)] mt-0.5">{st.riskReasons.join(" · ")}</div></div>
                       : <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#E4F5EC] text-[#166534] font-medium">Al día</span>}
