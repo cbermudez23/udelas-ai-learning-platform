@@ -285,10 +285,20 @@ export const moodle = {
    * calificar") — un comportamiento reproducible de esa función específica.
    * core_grades_update_grades usa la Grading API general de Moodle, evitando
    * por completo ese código.
+   *
+   * IMPORTANTE: `activityid` NO es el CMID (course module id). Moodle
+   * reenvía este parámetro directo como `$iteminstance` a la función núcleo
+   * grade_update() (junto con itemmodule="assign"), así que debe ser el
+   * INSTANCE ID de mdl_assign — el mismo id que ya usamos como
+   * moodleAssignId. Enviar el CMID hace que Moodle no encuentre el ítem de
+   * calificación real: la llamada devuelve código 0 ("OK") sin lanzar
+   * error, pero la nota no aparece en ningún lado del libro de
+   * calificaciones. Se confirmó este comportamiento en producción el
+   * 8-sep-2026 (ver conversación "2_Plataforma UDELAS AI Learning").
    */
   saveGrade: async (params: {
     moodleCourseId: number;
-    moodleCmid: number; // course module id de la tarea (no el instance id)
+    moodleAssignId: number; // instance id de mdl_assign — NO el cmid
     moodleUserId: number;
     grade: number; // 0-100
     feedback: string;
@@ -299,7 +309,7 @@ export const moodle = {
         source: "mod/assign",
         courseid: params.moodleCourseId,
         component: "mod_assign",
-        activityid: params.moodleCmid,
+        activityid: params.moodleAssignId,
         itemnumber: 0,
         grades: [{ studentid: params.moodleUserId, grade: params.grade, str_feedback: params.feedback }]
       }
