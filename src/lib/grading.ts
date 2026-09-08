@@ -3,13 +3,18 @@
  * (mod_assign_get_submissions), extrae el texto del archivo entregado
  * (reutilizando el mismo extractor de la Biblioteca IA, con OCR de respaldo),
  * pide a la IA una nota y retroalimentación sugeridas, y — tras la revisión
- * del docente — escribe la nota en Moodle vía core_grades_update_grades.
- * (mod_assign_save_grade/mod_assign_save_grades quedaron descartadas: en esta
- * instalación aceptan la llamada sin error pero graban -1 internamente,
- * confirmado con una llamada manual directa a la API, fuera de este código.
- * core_grades_update_grades requiere el CMID de la tarea (moodleCmid) como
- * `activityid` — confirmado el 8-sep-2026 por el propio error de Moodle al
- * probar con el instance id: "ID de módulo de curso no válida".)
+ * del docente — escribe la nota en Moodle en dos pasos:
+ * 1) core_grades_update_grades: fuente de verdad, escribe en el libro de
+ *    calificaciones central. Requiere el CMID de la tarea (moodleCmid) como
+ *    `activityid` — confirmado el 8-sep-2026 por el propio error de Moodle
+ *    al probar con el instance id: "ID de módulo de curso no válida".
+ * 2) mod_assign_save_grades: escritura complementaria y de mejor esfuerzo
+ *    hacia la tabla propia del módulo de tareas, solo para que la vista
+ *    "Ver envío" también muestre nota/estado/comentario. Se sabe que esta
+ *    función puede descartar el valor numérico en esta instalación de
+ *    Moodle (confirmado con una llamada manual directa a la API, fuera de
+ *    este código) — por eso nunca es la fuente de verdad ni bloquea el
+ *    resultado si falla.
  */
 import { prisma } from "@/lib/prisma";
 import { moodle, moodleDownload, type MoodleSubmission } from "@/lib/moodle";
@@ -172,6 +177,21 @@ export async function saveGradeToMoodle(opts: {
     feedback: opts.feedback
   });
   console.log(`[grading] core_grades_update_grades respondió. warnings=${JSON.stringify(warnings)}`);
+
+  // Escritura complementaria (mejor esfuerzo) hacia el propio módulo de
+  // tareas, para que "Ver envío" en Moodle también muestre nota, estado
+  // "Calificado" y el comentario. No afecta el resultado final: la nota
+  // oficial ya quedó guardada arriba, en el libro de calificaciones central.
+  const subs = await moodle.assignmentSubmissions(assignment.moodleAssignId).catch((e) => { console.warn("[grading] assignmentSubmissions falló:", e.message); return []; });
+  const sub = subs.find((s) => s.userid === opts.moodleUserId);
+  const attemptNumber = sub?.attemptnumber ?? 0;
+  await moodle.saveGradeModuleFeedback({
+    moodleAssignId: assignment.moodleAssignId,
+    moodleUserId: opts.moodleUserId,
+    grade: opts.grade,
+    feedback: opts.feedback,
+    attemptNumber
+  });
 
   // Verificación: leer de vuelta el grade tanto desde el módulo de tareas
   // (assign_grades) como desde el libro de calificaciones centralizado.

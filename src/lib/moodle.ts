@@ -310,7 +310,11 @@ export const moodle = {
         component: "mod_assign",
         activityid: params.moodleCmid,
         itemnumber: 0,
-        grades: [{ studentid: params.moodleUserId, grade: params.grade, str_feedback: params.feedback }]
+        // feedbackformat=1 (FORMAT_HTML) explícito: sin este parámetro, en
+        // pruebas se observó que el texto de retroalimentación no siempre
+        // queda guardado (se confirmó el 9-sep-2026 con un estudiante que
+        // recibió la nota pero no el comentario, mientras que otro sí).
+        grades: [{ studentid: params.moodleUserId, grade: params.grade, str_feedback: params.feedback, feedbackformat: 1 }]
       }
     );
     console.log("[moodle.saveGrade] Respuesta cruda de core_grades_update_grades:", JSON.stringify(r));
@@ -318,6 +322,62 @@ export const moodle = {
     // en objeto; si viene envuelta con warnings, se propagan igual.
     const warnings = (r as any)?.warnings ?? [];
     return { warnings };
+  },
+
+  /**
+   * Escritura COMPLEMENTARIA (no autoritativa) hacia la propia tabla del
+   * módulo de tareas, para que la vista "Ver envío" en Moodle muestre nota,
+   * "Estado de la calificación: Calificado" y el comentario de
+   * retroalimentación — cosas que core_grades_update_grades NO actualiza,
+   * porque solo escribe en el libro de calificaciones central.
+   *
+   * Se usa mod_assign_save_grades (plural). Se sabe, por pruebas repetidas
+   * el 8-sep-2026 (incluida una llamada 100% manual sin pasar por este
+   * código), que esta instalación de Moodle a veces descarta silenciosamente
+   * el valor numérico de la nota en esta función específica — por eso NO es
+   * la fuente de verdad; la nota real ya quedó escrita de forma confiable
+   * por saveGrade() (core_grades_update_grades) antes de llamar a esta
+   * función. Esta llamada es "mejor esfuerzo": si falla o no aplica el
+   * número, no se considera un error — el número correcto ya está a salvo
+   * en el libro de calificaciones central.
+   */
+  saveGradeModuleFeedback: async (params: {
+    moodleAssignId: number; // instance id (no el cmid)
+    moodleUserId: number;
+    grade: number;
+    feedback: string;
+    attemptNumber: number; // número de intento real de la entrega
+  }): Promise<{ warnings: any[] }> => {
+    console.log(`[moodle.saveGradeModuleFeedback] moodleAssignId=${params.moodleAssignId} studentid=${params.moodleUserId} attemptNumber=${params.attemptNumber}`);
+    try {
+      const r = await moodleCall<{ warnings?: any[] }>(
+        "mod_assign_save_grades",
+        {
+          assignmentid: params.moodleAssignId,
+          applytoall: 0,
+          grades: [
+            {
+              userid: params.moodleUserId,
+              grade: params.grade,
+              attemptnumber: params.attemptNumber,
+              addattempt: 0,
+              workflowstate: "graded",
+              plugindata: {
+                assignfeedbackcomments_editor: { text: params.feedback, format: 1 },
+                files_filemanager: 0
+              }
+            }
+          ]
+        }
+      );
+      console.log("[moodle.saveGradeModuleFeedback] Respuesta cruda:", JSON.stringify(r));
+      return { warnings: r?.warnings ?? [] };
+    } catch (e: any) {
+      // Mejor esfuerzo: si esta llamada falla, no interrumpe el flujo — la
+      // nota oficial ya quedó guardada por saveGrade().
+      console.warn("[moodle.saveGradeModuleFeedback] Falló (no crítico):", e?.message);
+      return { warnings: [{ message: e?.message ?? "Error desconocido" }] };
+    }
   },
 
   gradeItems: async (courseId: number, moodleUserId: number) => {
