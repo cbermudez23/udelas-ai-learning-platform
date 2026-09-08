@@ -16,6 +16,7 @@
  */
 import { prisma } from "@/lib/prisma";
 import { moodle, moodleBaseUrl } from "@/lib/moodle";
+import { textToHtml } from "@/lib/html";
 
 export async function updateCourseInMoodle(opts: {
   courseId: string; // id local (Prisma)
@@ -35,7 +36,7 @@ export async function updateCourseInMoodle(opts: {
     id: course.moodleCourseId,
     fullname: opts.fullname,
     categoryid: opts.categoryid,
-    summary: opts.summary,
+    summary: opts.summary !== undefined ? textToHtml(opts.summary) : undefined,
     format: opts.format
   });
   console.log(`[course-edit] Moodle actualizado. Refrescando copia local...`);
@@ -82,7 +83,7 @@ export async function createCourseInMoodle(opts: {
     fullname: opts.fullname,
     shortname: opts.shortname,
     categoryid: opts.categoryid,
-    summary: opts.summary,
+    summary: opts.summary ? textToHtml(opts.summary) : undefined,
     startdate: opts.startdate,
     format: opts.format
   });

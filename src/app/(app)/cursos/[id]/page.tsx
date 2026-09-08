@@ -4,9 +4,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import TeacherCoursePanel from "@/components/TeacherCoursePanel";
+import CourseStructureTools from "@/components/CourseStructureTools";
 import GradingAssistant from "@/components/GradingAssistant";
 import { buildCourseTeacherSummary } from "@/lib/teacher";
 import { ArrowLeft, ExternalLink, FileText, Link2, MessageSquare, ClipboardList, HelpCircle, Folder, BookOpen, Video, File } from "lucide-react";
+import { stripHtml } from "@/lib/html";
 
 export const dynamic = "force-dynamic";
 
@@ -93,7 +95,7 @@ export default async function CursoDetallePage({ params }: { params: { id: strin
               {course.shortName ? ` · ${course.shortName}` : ""}
               {enrollment.roleInCourse === "teacher" ? " · Eres docente de este curso" : ""}
             </div>
-            {course.summary && <p className="text-[11px] mt-2 text-[var(--text-secondary)]">{course.summary}</p>}
+            {course.summary && <p className="text-[11px] mt-2 text-[var(--text-secondary)]">{stripHtml(course.summary)}</p>}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {(isTeacher || session!.user.role === "ADMIN") && course.moodleCourseId && (
@@ -135,6 +137,9 @@ export default async function CursoDetallePage({ params }: { params: { id: strin
       {teacherSummary && <TeacherCoursePanel summary={teacherSummary} />}
       {isTeacher && course.assignments.length > 0 && (
         <GradingAssistant assignments={course.assignments.map((a) => ({ id: a.id, name: a.name }))} />
+      )}
+      {(isTeacher || session!.user.role === "ADMIN") && course.moodleCourseId && (
+        <CourseStructureTools courseId={course.id} />
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">

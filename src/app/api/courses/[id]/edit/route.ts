@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { moodle } from "@/lib/moodle";
 import { updateCourseInMoodle } from "@/lib/course-creation";
+import { stripHtml } from "@/lib/html";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       course: {
         id: course.id,
         fullname: live?.fullname ?? course.name,
-        summary: live?.summary ?? course.summary ?? "",
+        summary: stripHtml(live?.summary ?? course.summary ?? ""),
         format: live?.format ?? "topics",
         categoryid: live?.categoryid ?? live?.category
       },

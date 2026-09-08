@@ -227,6 +227,59 @@ export const moodle = {
   courseContents: (courseId: number) =>
     moodleCall<MoodleSection[]>("core_course_get_contents", { courseid: courseId }),
 
+  /**
+   * Crea una nueva sección ("Bloque") al final del curso, usando la misma
+   * función que usa el editor nuevo de Moodle (core_courseformat_update_course,
+   * acción "section_add") — función oficial del núcleo, sin plugin.
+   * Devuelve el id y número de la sección recién creada, obtenidos comparando
+   * el contenido del curso antes/después (la respuesta cruda de la función
+   * es un JSON interno del editor, no documentado para consumo externo).
+   */
+  createSection: async (courseId: number): Promise<{ id: number; sectionNum: number }> => {
+    const before = await moodle.courseContents(courseId);
+    const beforeIds = new Set(before.map((s) => s.id));
+    await moodleCall("core_courseformat_update_course", {
+      action: "section_add",
+      courseid: courseId,
+      ids: []
+    });
+    const after = await moodle.courseContents(courseId);
+    const nuevo = after.find((s) => !beforeIds.has(s.id));
+    if (!nuevo) throw new Error("Moodle creó la sección pero no se pudo identificar cuál es (revisa manualmente en Moodle).");
+    return { id: nuevo.id, sectionNum: nuevo.section };
+  },
+
+  /**
+   * Renombra una sección existente (core_update_inplace_editable, la misma
+   * función genérica que usa Moodle para renombrar en línea desde la UI).
+   * `format` debe ser el formato real del curso ('topics', 'weeks', ...):
+   * el componente a usar es "format_<formato>".
+   */
+  renameSection: async (params: { sectionid: number; name: string; format: string }): Promise<void> => {
+    await moodleCall("core_update_inplace_editable", {
+      component: `format_${params.format}`,
+      itemtype: "sectionname",
+      itemid: params.sectionid,
+      value: params.name
+    });
+  },
+
+  /**
+   * Crea una subsección dentro de una sección existente
+   * (core_courseformat_new_module, modname="subsection"). Es el ÚNICO tipo
+   * de actividad que Moodle permite crear vía servicios web sin plugin
+   * adicional — el resto (tarea, foro, página, etc.) no declara soporte
+   * para "creación rápida" (FEATURE_QUICKCREATE), confirmado revisando el
+   * código fuente de Moodle 5.2 el 9-sep-2026.
+   */
+  createSubsection: async (params: { courseId: number; targetSectionId: number }): Promise<void> => {
+    await moodleCall("core_courseformat_new_module", {
+      courseid: params.courseId,
+      modname: "subsection",
+      targetsectionid: params.targetSectionId
+    });
+  },
+
   enrolledUsers: (courseId: number) =>
     moodleCall<MoodleEnrolledUser[]>("core_enrol_get_enrolled_users", { courseid: courseId }),
 
