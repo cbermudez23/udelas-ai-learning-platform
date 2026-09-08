@@ -111,7 +111,8 @@ model CourseContent {
 model Assignment {
   id             String    @id @default(cuid())
   courseId       String
-  moodleAssignId Int       @unique
+  moodleAssignId Int       @unique // instance id de mdl_assign (para leer entregas)
+  moodleCmid     Int?      // course module id (para escribir notas vía core_grades_update_grades)
   name           String
   intro          String?
   dueDate        DateTime?

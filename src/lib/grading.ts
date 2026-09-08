@@ -3,7 +3,10 @@
  * (mod_assign_get_submissions), extrae el texto del archivo entregado
  * (reutilizando el mismo extractor de la Biblioteca IA, con OCR de respaldo),
  * pide a la IA una nota y retroalimentación sugeridas, y — tras la revisión
- * del docente — escribe el resultado final en Moodle (mod_assign_save_grade).
+ * del docente — escribe la nota en Moodle vía core_grades_update_grades.
+ * (mod_assign_save_grade/mod_assign_save_grades quedaron descartadas: en esta
+ * instalación aceptan la llamada sin error pero graban -1 internamente,
+ * confirmado con una llamada manual directa a la API, fuera de este código.)
  */
 import { prisma } from "@/lib/prisma";
 import { moodle, moodleDownload, type MoodleSubmission } from "@/lib/moodle";
@@ -150,41 +153,35 @@ export async function saveGradeToMoodle(opts: {
 }): Promise<{ warning: string | null }> {
   const assignment = await prisma.assignment.findUnique({ where: { id: opts.assignmentId }, include: { course: true } });
   if (!assignment) throw new Error("Tarea no encontrada");
-
-  // Se pasa el número de intento REAL de la entrega (no -1): con -1 ("último intento")
-  // Moodle acepta la llamada sin error pero, si no existe aún un registro de calificación
-  // para esa combinación usuario+tarea, puede no aplicar la nota.
-  const subs = await moodle.assignmentSubmissions(assignment.moodleAssignId);
-  const sub = subs.find((s) => s.userid === opts.moodleUserId);
-  const attemptNumber = sub?.attemptnumber ?? 0;
-  console.log(`[grading] moodleAssignId=${assignment.moodleAssignId} moodleUserId=${opts.moodleUserId} grade=${opts.grade} attemptNumber=${attemptNumber} (submission encontrada: ${!!sub})`);
+  if (!assignment.moodleCmid) {
+    throw new Error('Falta el identificador de módulo (CMID) de esta tarea. Ve al Panel de administración y pulsa "Sincronizar todo Moodle" una vez, luego vuelve a intentarlo.');
+  }
+  if (!assignment.course.moodleCourseId) {
+    throw new Error("Este curso no tiene un id de Moodle asociado.");
+  }
+  console.log(`[grading] moodleCourseId=${assignment.course.moodleCourseId} moodleCmid=${assignment.moodleCmid} moodleUserId=${opts.moodleUserId} grade=${opts.grade}`);
 
   const { warnings } = await moodle.saveGrade({
-    moodleAssignId: assignment.moodleAssignId,
+    moodleCourseId: assignment.course.moodleCourseId,
+    moodleCmid: assignment.moodleCmid,
     moodleUserId: opts.moodleUserId,
     grade: opts.grade,
-    feedback: opts.feedback,
-    attemptNumber
+    feedback: opts.feedback
   });
-  console.log(`[grading] mod_assign_save_grade respondió. warnings=${JSON.stringify(warnings)}`);
+  console.log(`[grading] core_grades_update_grades respondió. warnings=${JSON.stringify(warnings)}`);
 
-  // Verificación directa en la tabla del módulo (assign_grades), independiente del
-  // libro de calificaciones centralizado: nos dice si el problema está en el "push"
-  // hacia el gradebook, o si ni siquiera el módulo de tareas registró el cambio.
-  const subsAfter = await moodle.assignmentSubmissions(assignment.moodleAssignId);
-  const subAfter = subsAfter.find((s) => s.userid === opts.moodleUserId);
-  console.log(`[grading] Estado en assign_grades tras guardar: gradingstatus=${subAfter?.gradingstatus} (directamente en el módulo de tareas, no en el libro de calificaciones)`);
-
+  // Verificación: leer de vuelta el grade tanto desde el módulo de tareas
+  // (assign_grades) como desde el libro de calificaciones centralizado.
   const rawGrades = await moodle.assignmentGrades(assignment.moodleAssignId).catch((e) => { console.warn("[grading] assignmentGrades falló:", e.message); return []; });
   const rawGrade = rawGrades.find((g) => g.userid === opts.moodleUserId);
-  console.log(`[grading] Valor numérico en assign_grades (mod_assign_get_grades): ${JSON.stringify(rawGrade)}`);
+  console.log(`[grading] Valor en assign_grades tras guardar (mod_assign_get_grades): ${JSON.stringify(rawGrade)}`);
 
   // Refresca la nota localmente de inmediato (sin esperar al próximo ciclo de sincronización)
   const user = await prisma.user.findUnique({ where: { moodleUserId: opts.moodleUserId } });
   if (user) {
     const enrollment = await prisma.enrollment.findUnique({ where: { userId_courseId: { userId: user.id, courseId: assignment.courseId } } });
     if (enrollment) {
-      const items = await moodle.gradeItems(assignment.course.moodleCourseId!, opts.moodleUserId).catch((e) => { console.warn("[grading] gradeItems falló:", e.message); return []; });
+      const items = await moodle.gradeItems(assignment.course.moodleCourseId, opts.moodleUserId).catch((e) => { console.warn("[grading] gradeItems falló:", e.message); return []; });
       console.log(`[grading] gradeItems tras guardar: ${JSON.stringify(items.map((i: any) => ({ id: i.id, itemname: i.itemname, graderaw: i.graderaw })))}`);
       if (items.length) await syncGrades(enrollment.id, items, newReport());
     } else {
@@ -195,9 +192,9 @@ export async function saveGradeToMoodle(opts: {
   }
 
   if (warnings.length > 0) {
-    console.warn("mod_assign_save_grade devolvió warnings:", warnings);
-    const msg = warnings.map((w) => w.message).join(" ");
-    return { warning: `Moodle indicó: "${msg}". Es posible que esta tarea tenga activada una "calificación avanzada" (rúbrica o guía dentro de Moodle) que impide fijar la nota directamente; el comentario sí se guarda, pero verifica la nota en Moodle.` };
+    console.warn("core_grades_update_grades devolvió warnings:", warnings);
+    const msg = warnings.map((w: any) => w.message || JSON.stringify(w)).join(" ");
+    return { warning: `Moodle indicó: "${msg}". Verifica la nota directamente en Moodle.` };
   }
   return { warning: null };
 }

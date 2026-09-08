@@ -276,40 +276,39 @@ export const moodle = {
     return r.assignments?.[0]?.grades ?? [];
   },
 
+  /**
+   * Guarda la calificación de un estudiante escribiendo directamente en el
+   * libro de calificaciones (core_grades_update_grades), NO vía
+   * mod_assign_save_grade(s): se confirmó con una prueba manual directa a la
+   * API (sin pasar por este código) que esta instalación de Moodle acepta
+   * mod_assign_save_grade sin error mientras graba internamente -1 ("sin
+   * calificar") — un comportamiento reproducible de esa función específica.
+   * core_grades_update_grades usa la Grading API general de Moodle, evitando
+   * por completo ese código.
+   */
   saveGrade: async (params: {
-    moodleAssignId: number;
+    moodleCourseId: number;
+    moodleCmid: number; // course module id de la tarea (no el instance id)
     moodleUserId: number;
     grade: number; // 0-100
     feedback: string;
-    attemptNumber: number; // número de intento REAL de la entrega
-  }): Promise<{ warnings: { item?: string; warningcode: string; message: string }[] }> => {
-    // Se usa la función PLURAL (mod_assign_save_grades), no la singular
-    // (mod_assign_save_grade): en pruebas reales la singular acepta la llamada
-    // sin error pero graba el grade como -1 ("sin calificar") en assign_grades;
-    // la plural, con una estructura de parámetros distinta (grades: [...]),
-    // tiene mejor evidencia de funcionar correctamente vía API REST.
-    const r = await moodleCall<{ warnings?: { item?: string; warningcode: string; message: string }[] }>(
-      "mod_assign_save_grades",
+  }): Promise<{ warnings: any[] }> => {
+    const r = await moodleCall<any[] | { warnings?: any[] }>(
+      "core_grades_update_grades",
       {
-        assignmentid: params.moodleAssignId,
-        applytoall: 0,
-        grades: [
-          {
-            userid: params.moodleUserId,
-            grade: params.grade,
-            attemptnumber: params.attemptNumber,
-            addattempt: 0,
-            workflowstate: "",
-            plugindata: {
-              assignfeedbackcomments_editor: { text: params.feedback, format: 1 },
-              files_filemanager: 0
-            }
-          }
-        ]
+        source: "mod/assign",
+        courseid: params.moodleCourseId,
+        component: "mod_assign",
+        activityid: params.moodleCmid,
+        itemnumber: 0,
+        grades: [{ studentid: params.moodleUserId, grade: params.grade, str_feedback: params.feedback }]
       }
     );
-    console.log("[moodle.saveGrade] Respuesta cruda de mod_assign_save_grades:", JSON.stringify(r));
-    return { warnings: r?.warnings ?? [] };
+    console.log("[moodle.saveGrade] Respuesta cruda de core_grades_update_grades:", JSON.stringify(r));
+    // Esta función devuelve normalmente un entero de estado (0 = OK) sin envolver
+    // en objeto; si viene envuelta con warnings, se propagan igual.
+    const warnings = (r as any)?.warnings ?? [];
+    return { warnings };
   },
 
   gradeItems: async (courseId: number, moodleUserId: number) => {

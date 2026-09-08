@@ -169,7 +169,8 @@ async function syncAssignments(courseId: string, assignments: MoodleAssignment[]
       intro: stripHtml(a.intro).slice(0, 1000) || null,
       dueDate: tsToDate(a.duedate),
       openDate: tsToDate(a.allowsubmissionsfromdate),
-      url: `${base}/mod/assign/view.php?id=${a.cmid}`
+      url: `${base}/mod/assign/view.php?id=${a.cmid}`,
+      moodleCmid: a.cmid
     };
     await prisma.assignment.upsert({
       where: { moodleAssignId: a.id },
