@@ -229,6 +229,51 @@ export const moodle = {
   enrolledUsers: (courseId: number) =>
     moodleCall<MoodleEnrolledUser[]>("core_enrol_get_enrolled_users", { courseid: courseId }),
 
+  /**
+   * Crea el curso directamente en Moodle (core_course_create_courses). Es
+   * una función estándar y estable del núcleo de Moodle — a diferencia de
+   * crear actividades (tareas, foros, etc.), que Moodle NO expone vía
+   * servicios web (investigado y confirmado el 9-sep-2026; requeriría un
+   * plugin adicional en el servidor, que por ahora se dejó fuera de
+   * alcance). Este "cascarón" cubre nombre, categoría, formato y fechas; el
+   * docente agrega el contenido y las actividades directamente en Moodle.
+   */
+  createCourse: async (params: {
+    fullname: string;
+    shortname: string;
+    categoryid: number;
+    summary?: string;
+    startdate?: number; // timestamp unix, opcional
+    format?: string; // 'topics' | 'weeks', default 'topics'
+  }): Promise<{ id: number; shortname: string }> => {
+    const r = await moodleCall<{ id: number; shortname: string }[]>("core_course_create_courses", {
+      courses: [
+        {
+          fullname: params.fullname,
+          shortname: params.shortname,
+          categoryid: params.categoryid,
+          summary: params.summary ?? "",
+          summaryformat: 1,
+          format: params.format ?? "topics",
+          ...(params.startdate ? { startdate: params.startdate } : {}),
+          visible: 1
+        }
+      ]
+    });
+    if (!r?.[0]) throw new Error("Moodle no devolvió el curso creado.");
+    return r[0];
+  },
+
+  /**
+   * Matricula a un usuario en un curso con un rol dado (enrol_manual_enrol_users).
+   * roleid de Moodle: 3 = Editing teacher (docente), 5 = Student.
+   */
+  enrolUser: async (params: { courseid: number; userid: number; roleid: 3 | 5 }): Promise<void> => {
+    await moodleCall("enrol_manual_enrol_users", {
+      enrolments: [{ roleid: params.roleid, userid: params.userid, courseid: params.courseid }]
+    });
+  },
+
   usersByEmail: (emails: string[]) =>
     moodleCall<{ id: number; email: string; fullname: string }[]>("core_user_get_users_by_field", {
       field: "email",

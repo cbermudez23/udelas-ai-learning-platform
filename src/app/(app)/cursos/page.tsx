@@ -28,7 +28,17 @@ export default async function CursosPage() {
         <div className="flex items-center gap-2 text-[13px] font-medium">
           <BookOpen className="w-4 h-4 text-[var(--clr-brand2)]" /> Mis cursos
         </div>
-        <MoodleSyncButton />
+        <div className="flex items-center gap-2">
+          {(session!.user.role === "PROFESSOR" || session!.user.role === "ADMIN") && (
+            <Link
+              href="/cursos/crear"
+              className="text-[11px] font-medium px-2.5 py-1.5 rounded-md bg-[var(--clr-brand2)] text-white"
+            >
+              + Crear curso
+            </Link>
+          )}
+          <MoodleSyncButton />
+        </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {enrollments.map((e) => (
