@@ -280,6 +280,9 @@ export const moodle = {
     });
   },
 
+  enrolledUsers: (courseId: number) =>
+    moodleCall<MoodleEnrolledUser[]>("core_enrol_get_enrolled_users", { courseid: courseId }),
+
   /**
    * Crea una actividad usando el plugin propio local_udelascreator
    * (local_udelascreator_create_activity) — Moodle core no expone esto vía
