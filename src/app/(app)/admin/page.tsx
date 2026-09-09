@@ -12,7 +12,7 @@ const EXPECTED_FUNCTIONS = [
   "core_completion_get_activities_completion_status", "core_calendar_get_action_events_by_course",
   "core_badges_get_user_badges", "core_completion_get_course_completion_status",
   "core_competency_list_course_competencies", "tool_lp_data_for_user_competency_summary_in_course",
-  "mod_assign_get_submissions", "mod_assign_get_grades", "core_grades_update_grades", "mod_assign_save_grades", "core_course_create_courses", "enrol_manual_enrol_users", "core_course_update_courses", "core_courseformat_update_course", "core_courseformat_new_module", "core_update_inplace_editable"
+  "mod_assign_get_submissions", "mod_assign_get_grades", "core_grades_update_grades", "mod_assign_save_grades", "core_course_create_courses", "enrol_manual_enrol_users", "core_course_update_courses", "core_courseformat_update_course", "core_courseformat_new_module", "core_update_inplace_editable", "local_udelascreator_create_activity"
 ];
 
 function Stat({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
@@ -76,6 +76,9 @@ export default async function AdminHome() {
             </div>
           </div>
           {moodleStatus.ok && <MoodleSyncButton scope="all" label="Sincronizar todo Moodle" />}
+          <a href="/admin/probar-actividad" className="text-[11px] font-medium px-2.5 py-1.5 rounded-md border border-[var(--border)] hover:bg-gray-50">
+            Probar creación de actividad
+          </a>
         </div>
         {moodleStatus.ok && (missing.length > 0 || !downloadFiles) && (
           <div className="mt-2 text-[11px] text-[#B45309] bg-[#FDF3E3] rounded-md px-3 py-2">

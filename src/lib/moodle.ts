@@ -280,8 +280,31 @@ export const moodle = {
     });
   },
 
-  enrolledUsers: (courseId: number) =>
-    moodleCall<MoodleEnrolledUser[]>("core_enrol_get_enrolled_users", { courseid: courseId }),
+  /**
+   * Crea una actividad usando el plugin propio local_udelascreator
+   * (local_udelascreator_create_activity) — Moodle core no expone esto vía
+   * servicios web para la mayoría de tipos de actividad (confirmado
+   * revisando el código fuente el 9-sep-2026). modname permitido: forum,
+   * page, url, label, folder, assign. `settings` son campos específicos de
+   * cada tipo (ver el plugin); se manda como JSON string.
+   */
+  createActivity: async (params: {
+    courseId: number;
+    sectionId: number;
+    modname: string;
+    name: string;
+    intro?: string;
+    settings?: Record<string, unknown>;
+  }): Promise<{ cmid: number; instanceid: number; modname: string }> => {
+    return moodleCall("local_udelascreator_create_activity", {
+      courseid: params.courseId,
+      sectionid: params.sectionId,
+      modname: params.modname,
+      name: params.name,
+      intro: params.intro ?? "",
+      settings: JSON.stringify(params.settings ?? {})
+    });
+  },
 
   /**
    * Crea el curso directamente en Moodle (core_course_create_courses). Es
