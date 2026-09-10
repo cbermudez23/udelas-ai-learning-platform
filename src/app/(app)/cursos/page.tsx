@@ -32,7 +32,7 @@ export default async function CursosPage() {
           {(session!.user.role === "PROFESSOR" || session!.user.role === "ADMIN") && (
             <Link
               href="/cursos/crear"
-              className="text-[11px] font-medium px-2.5 py-1.5 rounded-md bg-[var(--clr-brand2)] text-white"
+              className="text-[11px] font-medium px-2.5 py-1.5 rounded-md bg-[var(--role-teacher)] text-white"
             >
               + Crear curso
             </Link>

@@ -115,7 +115,7 @@ export default function CourseStructureTools({ courseId }: { courseId: string })
   }
 
   return (
-    <div className="card space-y-3">
+    <div className="card space-y-3 border-l-4" style={{ borderLeftColor: "var(--role-teacher)" }}>
       <div className="text-[12px] font-medium">Estructura del curso (en Moodle)</div>
 
       <div className="flex flex-wrap items-end gap-2">
@@ -131,7 +131,7 @@ export default function CourseStructureTools({ courseId }: { courseId: string })
         <button
           disabled={busy}
           onClick={() => run({ action: "create_section", name: newBlockName || undefined }, "Bloque creado")}
-          className="text-[11px] font-medium px-2.5 py-1.5 rounded-md bg-[var(--clr-brand2)] text-white disabled:opacity-50"
+          className="text-[11px] font-medium px-2.5 py-1.5 rounded-md bg-[var(--role-teacher)] text-white disabled:opacity-50"
         >
           + Crear bloque
         </button>
@@ -155,7 +155,7 @@ export default function CourseStructureTools({ courseId }: { courseId: string })
         <button
           disabled={busy || !subsectionTarget}
           onClick={() => run({ action: "create_subsection", targetSectionId: subsectionTarget }, "Subsección creada")}
-          className="text-[11px] font-medium px-2.5 py-1.5 rounded-md border border-[var(--clr-brand2)] text-[var(--clr-brand2)] disabled:opacity-50"
+          className="text-[11px] font-medium px-2.5 py-1.5 rounded-md border border-[var(--role-teacher)] text-[var(--role-teacher)] disabled:opacity-50"
         >
           + Crear subsección
         </button>
@@ -238,7 +238,7 @@ export default function CourseStructureTools({ courseId }: { courseId: string })
         )}
 
         <button type="submit" disabled={actBusy}
-          className="text-[11px] font-medium px-2.5 py-1.5 rounded-md bg-[var(--clr-brand2)] text-white disabled:opacity-50">
+          className="text-[11px] font-medium px-2.5 py-1.5 rounded-md bg-[var(--role-teacher)] text-white disabled:opacity-50">
           {actBusy ? "Creando…" : "+ Crear actividad"}
         </button>
 

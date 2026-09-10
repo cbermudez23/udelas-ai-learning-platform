@@ -101,7 +101,7 @@ export default async function CursoDetallePage({ params }: { params: { id: strin
             {(isTeacher || session!.user.role === "ADMIN") && course.moodleCourseId && (
               <Link
                 href={`/cursos/${course.id}/editar`}
-                className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-md border border-[var(--clr-brand2)] text-[var(--clr-brand2)] hover:bg-[#EEF3FF]"
+                className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-md border border-[var(--role-teacher)] text-[var(--role-teacher)] hover:bg-[var(--role-teacher-bg)]"
               >
                 Editar curso
               </Link>

@@ -86,9 +86,9 @@ export default function GradingAssistant({ assignments }: { assignments: { id: s
   const input = "text-[11px] border border-[var(--border-tertiary)] rounded-md px-2.5 py-1.5 bg-white w-full";
 
   return (
-    <div className="card">
+    <div className="card border-l-4" style={{ borderLeftColor: "var(--role-teacher)" }}>
       <div className="flex items-center gap-2 text-[12px] font-medium mb-2">
-        <Sparkles className="w-4 h-4 text-[var(--clr-brand2)]" /> Calificación asistida por IA
+        <Sparkles className="w-4 h-4" style={{ color: "var(--role-teacher)" }} /> Calificación asistida por IA
       </div>
       <div className="text-[11px] text-[var(--text-secondary)] mb-3">
         La IA lee el archivo que entregó el estudiante y sugiere una nota y retroalimentación. Revisa y edita antes de guardar — la calificación final se escribe directamente en Moodle.
