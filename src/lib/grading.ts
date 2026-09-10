@@ -167,7 +167,6 @@ export async function saveGradeToMoodle(opts: {
   if (!assignment.course.moodleCourseId) {
     throw new Error("Este curso no tiene un id de Moodle asociado.");
   }
-  console.log(`[grading] moodleCourseId=${assignment.course.moodleCourseId} moodleAssignId(instance)=${assignment.moodleAssignId} moodleCmid(activityid real)=${assignment.moodleCmid} url=${assignment.url} moodleUserId=${opts.moodleUserId} grade=${opts.grade}`);
 
   const { warnings } = await moodle.saveGrade({
     moodleCourseId: assignment.course.moodleCourseId,
@@ -176,7 +175,6 @@ export async function saveGradeToMoodle(opts: {
     grade: opts.grade,
     feedback: opts.feedback
   });
-  console.log(`[grading] core_grades_update_grades respondió. warnings=${JSON.stringify(warnings)}`);
 
   // Escritura complementaria (mejor esfuerzo) hacia el propio módulo de
   // tareas, para que "Ver envío" en Moodle también muestre nota, estado
@@ -193,19 +191,12 @@ export async function saveGradeToMoodle(opts: {
     attemptNumber
   });
 
-  // Verificación: leer de vuelta el grade tanto desde el módulo de tareas
-  // (assign_grades) como desde el libro de calificaciones centralizado.
-  const rawGrades = await moodle.assignmentGrades(assignment.moodleAssignId).catch((e) => { console.warn("[grading] assignmentGrades falló:", e.message); return []; });
-  const rawGrade = rawGrades.find((g) => g.userid === opts.moodleUserId);
-  console.log(`[grading] Valor en assign_grades tras guardar (mod_assign_get_grades): ${JSON.stringify(rawGrade)}`);
-
   // Refresca la nota localmente de inmediato (sin esperar al próximo ciclo de sincronización)
   const user = await prisma.user.findUnique({ where: { moodleUserId: opts.moodleUserId } });
   if (user) {
     const enrollment = await prisma.enrollment.findUnique({ where: { userId_courseId: { userId: user.id, courseId: assignment.courseId } } });
     if (enrollment) {
       const items = await moodle.gradeItems(assignment.course.moodleCourseId, opts.moodleUserId).catch((e) => { console.warn("[grading] gradeItems falló:", e.message); return []; });
-      console.log(`[grading] gradeItems tras guardar: ${JSON.stringify(items.map((i: any) => ({ id: i.id, itemname: i.itemname, graderaw: i.graderaw })))}`);
       if (items.length) await syncGrades(enrollment.id, items, newReport());
     } else {
       console.warn(`[grading] No se encontró Enrollment local para userId=${user.id} courseId=${assignment.courseId}`);

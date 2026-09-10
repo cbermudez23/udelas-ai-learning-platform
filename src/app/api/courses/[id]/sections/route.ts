@@ -47,7 +47,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   try {
     await assertCanEdit(params.id, session.user.id, session.user.role);
     const { action, name, targetSectionId } = await req.json().catch(() => ({}));
-    console.log(`[sections] Petición courseId=${params.id} action=${action}`);
 
     if (action === "create_section") {
       if (name) {
@@ -59,11 +58,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         }
       }
       const section = await moodle.createSection(course.moodleCourseId);
-      console.log(`[sections] Sección creada id=${section.id} num=${section.sectionNum}`);
       if (name) {
         const live = await moodle.courseById(course.moodleCourseId);
         await moodle.renameSection({ sectionid: section.id, name: String(name), format: live?.format ?? "topics" });
-        console.log(`[sections] Sección renombrada a "${name}"`);
       }
       return NextResponse.json({ ok: true, section });
     }

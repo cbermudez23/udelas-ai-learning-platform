@@ -32,7 +32,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Faltan datos: nombre completo, nombre corto y categoría son obligatorios" }, { status: 400 });
   }
 
-  console.log(`[create-course] Petición recibida: fullname="${fullname}" shortname="${shortname}" categoryid=${categoryid}`);
   try {
     const course = await createCourseInMoodle({
       requestingUserId: session.user.id,
@@ -43,7 +42,6 @@ export async function POST(req: NextRequest) {
       startdate: startdate ? Number(startdate) : undefined,
       format: format ? String(format) : undefined
     });
-    console.log(`[create-course] Resultado OK. courseId local=${course.id} moodleCourseId=${course.moodleCourseId}`);
     return NextResponse.json({ ok: true, course });
   } catch (e: any) {
     console.error("[create-course] EXCEPCIÓN al crear curso en Moodle:", e);

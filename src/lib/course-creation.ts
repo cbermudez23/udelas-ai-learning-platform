@@ -31,7 +31,6 @@ export async function updateCourseInMoodle(opts: {
     throw new Error("Este curso no vive en Moodle (no tiene moodleCourseId), no se puede editar por esta vía.");
   }
 
-  console.log(`[course-edit] Actualizando curso moodleCourseId=${course.moodleCourseId}...`);
   await moodle.updateCourse({
     id: course.moodleCourseId,
     fullname: opts.fullname,
@@ -39,7 +38,6 @@ export async function updateCourseInMoodle(opts: {
     summary: opts.summary !== undefined ? textToHtml(opts.summary) : undefined,
     format: opts.format
   });
-  console.log(`[course-edit] Moodle actualizado. Refrescando copia local...`);
 
   let categoryName: string | undefined;
   if (opts.categoryid !== undefined) {
@@ -57,7 +55,7 @@ export async function updateCourseInMoodle(opts: {
     }
   });
 
-  console.log(`[course-edit] Copia local actualizada, id=${updated.id}`);
+  console.log(`[course-edit] Curso ${updated.id} (moodleCourseId=${course.moodleCourseId}) actualizado.`);
   return updated;
 }
 
@@ -78,7 +76,6 @@ export async function createCourseInMoodle(opts: {
     );
   }
 
-  console.log(`[course-creation] Creando curso "${opts.fullname}" (${opts.shortname}) en categoría ${opts.categoryid}...`);
   const created = await moodle.createCourse({
     fullname: opts.fullname,
     shortname: opts.shortname,
@@ -87,9 +84,7 @@ export async function createCourseInMoodle(opts: {
     startdate: opts.startdate,
     format: opts.format
   });
-  console.log(`[course-creation] Curso creado en Moodle: id=${created.id} shortname=${created.shortname}`);
 
-  console.log(`[course-creation] Matriculando al docente (moodleUserId=${teacher.moodleUserId}) como Editing teacher (roleid=3)...`);
   await moodle.enrolUser({ courseid: created.id, userid: teacher.moodleUserId, roleid: 3 });
 
   const categories = await moodle.categories().catch((e) => {
@@ -117,6 +112,6 @@ export async function createCourseInMoodle(opts: {
     data: { userId: teacher.id, courseId: course.id, roleInCourse: "teacher", progressPercent: 0 }
   });
 
-  console.log(`[course-creation] Curso local creado id=${course.id}, matrícula del docente registrada.`);
+  console.log(`[course-creation] Curso ${course.id} creado en Moodle (moodleCourseId=${created.id}) por userId=${teacher.id}.`);
   return course;
 }

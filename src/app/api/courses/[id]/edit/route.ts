@@ -55,7 +55,6 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   try {
     await assertCanEdit(params.id, session.user.id, session.user.role);
     const { fullname, categoryid, summary, format } = await req.json().catch(() => ({}));
-    console.log(`[course-edit] Petición recibida para courseId=${params.id}`);
     const updated = await updateCourseInMoodle({
       courseId: params.id,
       fullname: fullname !== undefined ? String(fullname) : undefined,

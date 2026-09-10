@@ -58,7 +58,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       intro: textToHtml(intro || ""),
       settings
     });
-    console.log(`[activities] OK cmid=${result.cmid}`);
 
     return NextResponse.json({
       ok: true,

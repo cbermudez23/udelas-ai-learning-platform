@@ -76,9 +76,6 @@ export default async function AdminHome() {
             </div>
           </div>
           {moodleStatus.ok && <MoodleSyncButton scope="all" label="Sincronizar todo Moodle" />}
-          <a href="/admin/probar-actividad" className="text-[11px] font-medium px-2.5 py-1.5 rounded-md border border-[var(--border)] hover:bg-gray-50">
-            Probar creación de actividad
-          </a>
         </div>
         {moodleStatus.ok && (missing.length > 0 || !downloadFiles) && (
           <div className="mt-2 text-[11px] text-[#B45309] bg-[#FDF3E3] rounded-md px-3 py-2">

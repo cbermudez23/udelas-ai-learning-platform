@@ -454,7 +454,6 @@ export const moodle = {
     grade: number; // 0-100
     feedback: string;
   }): Promise<{ warnings: any[] }> => {
-    console.log(`[moodle.saveGrade] Enviando activityid (CMID)=${params.moodleCmid} courseid=${params.moodleCourseId} studentid=${params.moodleUserId} grade=${params.grade}`);
     const r = await moodleCall<any[] | { warnings?: any[] }>(
       "core_grades_update_grades",
       {
@@ -470,7 +469,6 @@ export const moodle = {
         grades: [{ studentid: params.moodleUserId, grade: params.grade, str_feedback: params.feedback }]
       }
     );
-    console.log("[moodle.saveGrade] Respuesta cruda de core_grades_update_grades:", JSON.stringify(r));
     // Esta función devuelve normalmente un entero de estado (0 = OK) sin envolver
     // en objeto; si viene envuelta con warnings, se propagan igual.
     const warnings = (r as any)?.warnings ?? [];
@@ -501,7 +499,6 @@ export const moodle = {
     feedback: string;
     attemptNumber: number; // número de intento real de la entrega
   }): Promise<{ warnings: any[] }> => {
-    console.log(`[moodle.saveGradeModuleFeedback] moodleAssignId=${params.moodleAssignId} studentid=${params.moodleUserId} attemptNumber=${params.attemptNumber}`);
     try {
       const r = await moodleCall<{ warnings?: any[] }>(
         "mod_assign_save_grades",
@@ -523,7 +520,6 @@ export const moodle = {
           ]
         }
       );
-      console.log("[moodle.saveGradeModuleFeedback] Respuesta cruda:", JSON.stringify(r));
       return { warnings: r?.warnings ?? [] };
     } catch (e: any) {
       // Mejor esfuerzo: si esta llamada falla, no interrumpe el flujo — la
