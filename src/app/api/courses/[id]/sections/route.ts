@@ -50,6 +50,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     console.log(`[sections] Petición courseId=${params.id} action=${action}`);
 
     if (action === "create_section") {
+      if (name) {
+        const existing = await moodle.courseContents(course.moodleCourseId);
+        const normalized = String(name).trim().toLowerCase();
+        const dup = existing.find((s) => s.name.trim().toLowerCase() === normalized);
+        if (dup) {
+          return NextResponse.json({ error: `Ya existe un bloque llamado "${name}" (sección ${dup.section}). Elige otro nombre, o si de verdad quieres otro con el mismo nombre, cámbialo manualmente después en Moodle.` }, { status: 409 });
+        }
+      }
       const section = await moodle.createSection(course.moodleCourseId);
       console.log(`[sections] Sección creada id=${section.id} num=${section.sectionNum}`);
       if (name) {
