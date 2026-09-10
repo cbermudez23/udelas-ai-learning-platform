@@ -105,7 +105,7 @@ export default function AISettingsForm({ initial, keys }: { initial: S; keys: { 
         <div className="text-[12px] font-medium">Guardar</div>
         <div className="text-[11px] text-[var(--text-secondary)]">Los cambios aplican a toda la Plataforma en menos de 30 segundos, sin redesplegar.</div>
         <div className="flex items-center gap-3 pt-1">
-          <button onClick={save} disabled={saving} className="text-[11px] font-medium px-3 py-1.5 rounded-md bg-[var(--clr-brand2)] text-white hover:opacity-90 disabled:opacity-50">
+          <button onClick={save} disabled={saving} className="text-[11px] font-medium px-3 py-1.5 rounded-md bg-[var(--role-admin)] text-white hover:opacity-90 disabled:opacity-50">
             {saving ? "Guardando…" : "Guardar configuración"}
           </button>
           {msg && <span className="text-[11px] text-[var(--text-tertiary)]">{msg}</span>}

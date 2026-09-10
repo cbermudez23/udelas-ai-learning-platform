@@ -63,7 +63,7 @@ export default function InstitutionalLibrary({ docs, moodleCount }: { docs: Row[
             <label className="block text-[11px] font-medium mb-1">Archivo (PDF, Word, texto · máx. 20 MB)</label>
             <input type="file" accept=".pdf,.docx,.txt,.md,.html,.htm" onChange={(e) => setFile(e.target.files?.[0] || null)} className="text-[11px]" />
           </div>
-          <button onClick={upload} disabled={busy} className="inline-flex items-center justify-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-md bg-[var(--clr-brand2)] text-white hover:opacity-90 disabled:opacity-50">
+          <button onClick={upload} disabled={busy} className="inline-flex items-center justify-center gap-1.5 text-[11px] font-medium px-3 py-1.5 rounded-md bg-[var(--role-admin)] text-white hover:opacity-90 disabled:opacity-50">
             <Upload className="w-3.5 h-3.5" /> {busy ? "Procesando…" : "Subir e indexar"}
           </button>
         </div>

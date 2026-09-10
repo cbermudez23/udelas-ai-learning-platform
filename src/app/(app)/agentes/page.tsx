@@ -48,7 +48,7 @@ export default function AgentesPage() {
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 text-[13px] font-medium">
-        <Users className="w-4 h-4 text-[var(--clr-brand2)]" /> Agentes docentes
+        <Users className="w-4 h-4" style={{ color: "var(--role-teacher)" }} /> Agentes docentes
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {AGENTS.map((a) => {
@@ -57,7 +57,7 @@ export default function AgentesPage() {
             <Link
               key={a.slug}
               href={`/agentes/${a.slug}`}
-              className="border border-[var(--border-tertiary)] rounded-lg p-3 flex items-start gap-2.5 hover:border-[var(--clr-brand2)] transition-colors bg-white"
+              className="border border-[var(--border-tertiary)] rounded-lg p-3 flex items-start gap-2.5 hover:border-[var(--role-teacher)] transition-colors bg-white"
             >
               <div
                 className="w-[38px] h-[38px] rounded-lg flex items-center justify-center shrink-0"
