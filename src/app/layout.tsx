@@ -1,6 +1,13 @@
 import type { Metadata, Viewport } from "next";
+import { Roboto } from "next/font/google";
 import SessionProvider from "@/components/SessionProvider";
 import "./globals.css";
+
+const roboto = Roboto({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  variable: "--font-roboto"
+});
 
 export const metadata: Metadata = {
   title: "UDELAS AI Learning Platform",
@@ -20,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es">
+    <html lang="es" className={roboto.variable}>
       <body>
         <SessionProvider>{children}</SessionProvider>
       </body>

@@ -23,7 +23,8 @@ export default function AdminNav() {
             href={t.href}
             className={`shrink-0 rounded px-2 py-1 whitespace-nowrap
               text-[10px] sm:text-[11px]
-              ${active ? "bg-[var(--clr-brand2)] text-white" : "text-[var(--text-secondary)] hover:bg-[#EEF3FF]"}`}
+              ${active ? "text-white" : "text-[var(--text-secondary)] hover:bg-[var(--role-admin-bg)]"}`}
+            style={active ? { background: "var(--role-admin)" } : undefined}
           >
             {/* En pantallas muy pequeñas (< sm) usar etiqueta corta */}
             <span className="sm:hidden">{t.short}</span>

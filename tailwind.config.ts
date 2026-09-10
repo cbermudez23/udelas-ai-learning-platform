@@ -17,12 +17,20 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          DEFAULT: "#003366",
+          DEFAULT: "#002F5C",
           light: "#0055AA"
         },
         accent: {
           DEFAULT: "#E8A020",
           gold: "#C8891A"
+        },
+        role: {
+          student: "#1A73E8",
+          studentBg: "#EAF1FD",
+          teacher: "#0B8043",
+          teacherBg: "#E6F4EC",
+          admin: "#B06000",
+          adminBg: "#FBF0E0"
         }
       },
       borderRadius: {
