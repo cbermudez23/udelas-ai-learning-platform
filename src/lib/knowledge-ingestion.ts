@@ -151,6 +151,28 @@ function toVectorLiteral(v: number[]): string {
   return `[${v.join(",")}]`;
 }
 
+export interface KnowledgeChunkHit {
+  content: string;
+  source: string;
+  url: string | null;
+}
+
+/**
+ * Busca los fragmentos más similares (distancia coseno, pgvector) a `query` en
+ * knowledge_chunks. Usada por el Tutor IA para enriquecer su prompt con
+ * conocimiento institucional de UDELAS. Lanza si Ollama o la tabla no están
+ * disponibles; el llamador decide si continuar sin este contexto.
+ */
+export async function searchKnowledgeChunks(query: string, limit = 3): Promise<KnowledgeChunkHit[]> {
+  const embedding = await embedText(query);
+  const vector = toVectorLiteral(embedding);
+  return prisma.$queryRawUnsafe<KnowledgeChunkHit[]>(
+    `SELECT content, source, url FROM knowledge_chunks ORDER BY embedding <=> $1::vector LIMIT $2`,
+    vector,
+    limit
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Tabla knowledge_chunks (pgvector) — creada por SQL crudo, no depende de
 // `prisma db push`, igual que la columna embedding de LibraryChunk (ver src/lib/library.ts).
