@@ -7,7 +7,6 @@
  * en la tabla knowledge_chunks (pgvector). Esta tabla es la base de
  * conocimiento institucional que el Tutor IA / Asesor puede consultar.
  */
-import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 
 const SITE_BASE_URL = "https://www.udelas.ac.pa";
@@ -162,6 +161,7 @@ let tableEnsured = false;
 export async function ensureKnowledgeTable() {
   if (tableEnsured) return;
   await prisma.$executeRawUnsafe(`CREATE EXTENSION IF NOT EXISTS vector`);
+  await prisma.$executeRawUnsafe(`CREATE EXTENSION IF NOT EXISTS pgcrypto`);
   await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS knowledge_chunks (
       id UUID PRIMARY KEY,
@@ -187,8 +187,7 @@ async function deleteBySource(source: string) {
 async function insertChunk(content: string, embedding: number[], source: string, type: string, url: string) {
   await prisma.$executeRawUnsafe(
     `INSERT INTO knowledge_chunks (id, content, embedding, source, type, url, created_at)
-     VALUES ($1, $2, $3::vector, $4, $5, $6, now())`,
-    randomUUID(),
+     VALUES (gen_random_uuid(), $1, $2::vector, $3, $4, $5, now())`,
     content,
     toVectorLiteral(embedding),
     source,
