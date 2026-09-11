@@ -262,3 +262,120 @@ export async function scrapeUdelasWebsite(onProgress?: (e: IngestionProgressEven
 
   return { pagesProcessed: UDELAS_PATHS.length - pagesFailed, pagesFailed, chunksCreated, progress };
 }
+
+// ---------------------------------------------------------------------------
+// RIUDELAS — repositorio institucional (DSpace 7) via API REST
+// ---------------------------------------------------------------------------
+
+const RIUDELAS_BASE_URL = "https://repositorio2.udelas.ac.pa";
+const RIUDELAS_API_URL = `${RIUDELAS_BASE_URL}/server/api`;
+const RIUDELAS_PAGE_SIZE = 20;
+const RIUDELAS_MAX_PAGES = 10;
+const RIUDELAS_MAX_ITEMS = 200;
+const RIUDELAS_SOURCE = "RIUDELAS";
+
+interface DSpaceMetadataValue {
+  value: string;
+}
+
+type DSpaceMetadata = Record<string, DSpaceMetadataValue[]>;
+
+interface DSpaceItem {
+  id: string;
+  uuid?: string;
+  name?: string;
+  metadata?: DSpaceMetadata;
+}
+
+function firstMetadataValue(metadata: DSpaceMetadata | undefined, field: string): string {
+  return metadata?.[field]?.[0]?.value?.trim() || "";
+}
+
+function allMetadataValues(metadata: DSpaceMetadata | undefined, field: string): string[] {
+  return (metadata?.[field] || []).map((v) => v.value.trim()).filter(Boolean);
+}
+
+/** Llama a la API de búsqueda (Discover) de DSpace 7 y devuelve los items de una página. */
+async function fetchRIUDELASPage(page: number): Promise<DSpaceItem[]> {
+  const url = `${RIUDELAS_API_URL}/discover/search/objects?query=*&dsoType=item&size=${RIUDELAS_PAGE_SIZE}&page=${page}`;
+  const res = await fetch(url, {
+    headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0 (compatible; UdelasKnowledgeBot/1.0)" }
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  const objects = data?._embedded?.searchResult?._embedded?.objects || [];
+  return objects
+    .map((o: any) => o?._embedded?.indexableObject)
+    .filter((item: any): item is DSpaceItem => !!item);
+}
+
+export interface RIUDELASProgressEvent {
+  title: string;
+  status: "ok" | "error";
+  error?: string;
+}
+
+export interface RIUDELASIngestionResult {
+  pagesFetched: number;
+  itemsProcessed: number;
+  itemsFailed: number;
+  chunksCreated: number;
+  progress: RIUDELASProgressEvent[];
+}
+
+/**
+ * Recorre el repositorio institucional RIUDELAS (DSpace 7) vía su API REST,
+ * extrae título/autor/fecha/resumen de cada item publicado y guarda los
+ * embeddings en knowledge_chunks (type='repositorio', source='RIUDELAS').
+ * Pagina hasta RIUDELAS_MAX_PAGES páginas o RIUDELAS_MAX_ITEMS items (piloto).
+ * Si la API del repositorio falla, se detiene sin lanzar: el resto de la
+ * base de conocimiento (sitio web) no debe verse afectado.
+ */
+export async function scrapeRIUDELAS(): Promise<RIUDELASIngestionResult> {
+  await ensureKnowledgeTable();
+  await deleteBySource(RIUDELAS_SOURCE);
+
+  const progress: RIUDELASProgressEvent[] = [];
+  let itemsProcessed = 0;
+  let itemsFailed = 0;
+  let chunksCreated = 0;
+  let pagesFetched = 0;
+
+  for (let page = 0; page < RIUDELAS_MAX_PAGES; page++) {
+    let items: DSpaceItem[];
+    try {
+      items = await fetchRIUDELASPage(page);
+    } catch {
+      break;
+    }
+    pagesFetched++;
+    if (items.length === 0) break;
+
+    for (const item of items) {
+      const title = firstMetadataValue(item.metadata, "dc.title") || item.name || "Sin título";
+      try {
+        const author = allMetadataValues(item.metadata, "dc.contributor.author").join(", ") || "No especificado";
+        const date = firstMetadataValue(item.metadata, "dc.date.issued") || "No especificada";
+        const abstractText = firstMetadataValue(item.metadata, "dc.description.abstract") || "Sin resumen disponible.";
+
+        const text = `Título: ${title}\nAutor: ${author}\nFecha: ${date}\nResumen: ${abstractText}`;
+        const embedding = await embedText(text);
+        const uuid = item.uuid || item.id;
+        const url = `${RIUDELAS_BASE_URL}/items/${uuid}`;
+
+        await insertChunk(text, embedding, RIUDELAS_SOURCE, "repositorio", url);
+        chunksCreated++;
+        itemsProcessed++;
+        progress.push({ title, status: "ok" });
+      } catch (e: any) {
+        itemsFailed++;
+        progress.push({ title, status: "error", error: String(e?.message || e) });
+      }
+
+      if (itemsProcessed + itemsFailed >= RIUDELAS_MAX_ITEMS) break;
+    }
+    if (itemsProcessed + itemsFailed >= RIUDELAS_MAX_ITEMS) break;
+  }
+
+  return { pagesFetched, itemsProcessed, itemsFailed, chunksCreated, progress };
+}
