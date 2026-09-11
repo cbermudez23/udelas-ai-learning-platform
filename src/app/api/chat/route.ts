@@ -67,22 +67,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Base de Conocimiento institucional de UDELAS (pgvector): fragmentos del sitio
-  // web institucional relevantes para la pregunta del usuario.
-  let knowledgeBlock = "";
-  try {
-    const { searchKnowledgeChunks } = await import("@/lib/knowledge-ingestion");
-    const hits = await searchKnowledgeChunks(message, 3);
-    if (hits.length > 0) {
-      const knowledgeText = hits
-        .map((h) => `Fuente: ${h.source}${h.url ? ` (${h.url})` : ""}\n${h.content}`)
-        .join("\n\n");
-      knowledgeBlock = `CONOCIMIENTO INSTITUCIONAL UDELAS:\n${knowledgeText}\n\n`;
-    }
-  } catch (e) {
-    console.warn("Búsqueda en la Base de Conocimiento UDELAS falló:", e);
-  }
-
   // Contexto académico del estudiante (RAG básico institucional: datos propios del usuario)
   const enrollments = await prisma.enrollment.findMany({
     where: { userId },
@@ -155,7 +139,7 @@ export async function POST(req: NextRequest) {
   });
 
   const turns: ChatTurn[] = [
-    { role: "system", content: `${AGENT_SYSTEM_PROMPTS[agentType]}${STYLE_RULES}\n\n${knowledgeBlock}${academicContext}` },
+    { role: "system", content: `${AGENT_SYSTEM_PROMPTS[agentType]}${STYLE_RULES}\n\n${academicContext}` },
     ...history.map((h) => ({ role: h.role as "user" | "assistant", content: h.content })),
     { role: "user", content: message }
   ];

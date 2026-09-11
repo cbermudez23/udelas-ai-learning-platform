@@ -7,19 +7,26 @@ body, button, input, textarea, select {
 }
 
 :root {
-  --clr-brand: #002f5c;
+  /* Colores institucionales reales de UDELAS — extraídos por análisis de
+     píxeles del logo oficial el 10-sep-2026 (no inventados): azul marino
+     #103781 (color dominante del texto "UDELAS") y cian #00A6CE (color
+     dominante del globo). El dorado usado antes aquí no existe en la
+     identidad real de UDELAS — se reemplazó por completo. */
+  --clr-brand: #103781;
   --clr-brand2: #0055aa;
-  --clr-accent: #e8a020;
-  --clr-gold: #c8891a;
+  --clr-accent: #00a6ce;
+  --clr-gold: #006884; /* variante oscurecida del cian real, para texto legible sobre blanco (el cian puro no cumple contraste AA) */
 
   /* Color de identidad por rol — el mismo lenguaje que usa Google para
-     distinguir sus propias apps (Classroom, Workspace Admin) entre sí. */
+     distinguir sus propias apps (Classroom, Workspace Admin) entre sí.
+     Admin usa el cian institucional real (antes usaba un dorado que no
+     tiene base en la marca de UDELAS). */
   --role-student: #1a73e8;
   --role-student-bg: #eaf1fd;
   --role-teacher: #0b8043;
   --role-teacher-bg: #e6f4ec;
-  --role-admin: #b06000;
-  --role-admin-bg: #fbf0e0;
+  --role-admin: #006884;
+  --role-admin-bg: #e3f6fa;
 
   --bg-primary: #ffffff;
   --bg-secondary: #f4f6f9;

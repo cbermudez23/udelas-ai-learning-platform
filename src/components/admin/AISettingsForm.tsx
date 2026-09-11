@@ -2,15 +2,13 @@
 import { useState } from "react";
 
 type S = {
-  aiEnabled: boolean; aiProvider: "auto" | "anthropic" | "openai" | "ollama"; anthropicModel: string; openaiModel: string;
-  ollamaBaseUrl: string; ollamaModel: string;
+  aiEnabled: boolean; aiProvider: "auto" | "anthropic" | "openai"; anthropicModel: string; openaiModel: string;
   maxTokens: number; temperature: number; dailyMessageLimit: number; disabledMessage: string;
   riskGrade: number; riskProgress: number; riskOverdueMax: number;
 };
 
 const ANTHROPIC_MODELS = ["claude-sonnet-4-5", "claude-haiku-4-5", "claude-opus-4-1"];
 const OPENAI_MODELS = ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini"];
-const OLLAMA_MODELS = ["qwen3:8b", "llama3.1:8b", "mistral"];
 
 export default function AISettingsForm({ initial, keys }: { initial: S; keys: { anthropic: boolean; openai: boolean } }) {
   const [s, setS] = useState<S>(initial);
@@ -46,9 +44,8 @@ export default function AISettingsForm({ initial, keys }: { initial: S; keys: { 
             <option value="auto">Automático (Claude si hay clave; si no, OpenAI)</option>
             <option value="anthropic" disabled={!keys.anthropic}>Anthropic Claude {keys.anthropic ? "" : "(sin ANTHROPIC_API_KEY)"}</option>
             <option value="openai" disabled={!keys.openai}>OpenAI {keys.openai ? "" : "(sin OPENAI_API_KEY)"}</option>
-            <option value="ollama">Ollama (local)</option>
           </select>
-          <div className={help}>Las claves de API se gestionan en las variables de entorno de Render, no aquí. Ollama no requiere clave; usa el servidor local/red indicado abajo.</div>
+          <div className={help}>Las claves de API se gestionan en las variables de entorno de Render, no aquí.</div>
         </div>
         <div>
           <span className={label}>Modelo Claude</span>
@@ -59,16 +56,6 @@ export default function AISettingsForm({ initial, keys }: { initial: S; keys: { 
           <span className={label}>Modelo OpenAI</span>
           <input list="openai-models" value={s.openaiModel} onChange={(e) => set("openaiModel", e.target.value)} className={input} />
           <datalist id="openai-models">{OPENAI_MODELS.map((m) => <option key={m} value={m} />)}</datalist>
-        </div>
-        <div>
-          <span className={label}>URL del servidor Ollama</span>
-          <input value={s.ollamaBaseUrl} onChange={(e) => set("ollamaBaseUrl", e.target.value)} placeholder="http://localhost:11434" className={input} />
-          <div className={help}>Dirección del servidor Ollama accesible desde el backend. Se usa también como último proveedor de respaldo si Claude y OpenAI fallan.</div>
-        </div>
-        <div>
-          <span className={label}>Modelo Ollama</span>
-          <input list="ollama-models" value={s.ollamaModel} onChange={(e) => set("ollamaModel", e.target.value)} className={input} />
-          <datalist id="ollama-models">{OLLAMA_MODELS.map((m) => <option key={m} value={m} />)}</datalist>
         </div>
       </div>
 

@@ -7,11 +7,9 @@ import { prisma } from "@/lib/prisma";
 
 export interface AppSettings {
   aiEnabled: boolean;
-  aiProvider: "auto" | "anthropic" | "openai" | "ollama";
+  aiProvider: "auto" | "anthropic" | "openai";
   anthropicModel: string;
   openaiModel: string;
-  ollamaBaseUrl: string;
-  ollamaModel: string;
   maxTokens: number;
   temperature: number;
   dailyMessageLimit: number; // 0 = sin límite
@@ -26,8 +24,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   aiProvider: "auto",
   anthropicModel: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-5",
   openaiModel: process.env.OPENAI_MODEL || "gpt-4o-mini",
-  ollamaBaseUrl: process.env.OLLAMA_BASE_URL || "http://localhost:11434",
-  ollamaModel: process.env.OLLAMA_MODEL || "qwen3:8b",
   maxTokens: 800,
   temperature: 0.4,
   dailyMessageLimit: 0,
@@ -49,8 +45,6 @@ export async function getSettings(): Promise<AppSettings> {
   if (map.has("aiProvider")) s.aiProvider = map.get("aiProvider") as AppSettings["aiProvider"];
   if (map.has("anthropicModel")) s.anthropicModel = map.get("anthropicModel")!;
   if (map.has("openaiModel")) s.openaiModel = map.get("openaiModel")!;
-  if (map.has("ollamaBaseUrl")) s.ollamaBaseUrl = map.get("ollamaBaseUrl")!;
-  if (map.has("ollamaModel")) s.ollamaModel = map.get("ollamaModel")!;
   if (map.has("maxTokens")) s.maxTokens = Number(map.get("maxTokens")) || s.maxTokens;
   if (map.has("temperature")) s.temperature = Number(map.get("temperature"));
   if (map.has("dailyMessageLimit")) s.dailyMessageLimit = Number(map.get("dailyMessageLimit")) || 0;

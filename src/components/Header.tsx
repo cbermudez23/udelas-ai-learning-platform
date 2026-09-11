@@ -1,6 +1,7 @@
 "use client";
 
 import { signOut } from "next-auth/react";
+import Image from "next/image";
 import { Brain, Bell, LogOut, Menu } from "lucide-react";
 
 export default function Header({
@@ -19,8 +20,8 @@ export default function Header({
       >
         <Menu className="w-5 h-5" />
       </button>
-      <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center text-sm font-medium shrink-0">
-        U
+      <div className="h-8 px-1.5 rounded-lg bg-white flex items-center justify-center shrink-0">
+        <Image src="/images/udelas-logo.png" alt="UDELAS" width={80} height={37} className="h-6 w-auto" priority />
       </div>
       <div className="min-w-0">
         <div className="text-[13px] sm:text-[15px] font-medium leading-none truncate">
