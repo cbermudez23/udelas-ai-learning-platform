@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { moodle, moodleBaseUrl } from "@/lib/moodle";
-import { textToHtml } from "@/lib/html";
+import { textToHtml, markdownToHtml } from "@/lib/html";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
 
     const settings: Record<string, unknown> = {};
-    if (modname === "page") settings.content = textToHtml(content || "");
+    if (modname === "page") settings.content = markdownToHtml(content || "");
     if (modname === "url") {
       if (!externalurl) return NextResponse.json({ error: "Falta la URL de destino" }, { status: 400 });
       settings.externalurl = externalurl;

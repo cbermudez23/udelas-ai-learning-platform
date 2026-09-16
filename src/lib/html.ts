@@ -33,3 +33,57 @@ export function textToHtml(text?: string | null): string {
 function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
+
+/**
+ * Conversión sencilla de markdown a HTML, para el contenido que generan los
+ * agentes docentes (encabezados, negritas, cursivas, listas, párrafos) — no
+ * es un parser completo de markdown, cubre solo lo que la IA suele producir
+ * en estas respuestas.
+ */
+export function markdownToHtml(md: string): string {
+  const lines = (md || "").replace(/\r\n/g, "\n").split("\n");
+  const out: string[] = [];
+  let inUl = false;
+  let inOl = false;
+  let para: string[] = [];
+
+  const closeLists = () => {
+    if (inUl) { out.push("</ul>"); inUl = false; }
+    if (inOl) { out.push("</ol>"); inOl = false; }
+  };
+  const flushPara = () => {
+    if (para.length) { out.push(`<p>${inline(para.join(" "))}</p>`); para = []; }
+  };
+  const inline = (s: string) =>
+    escapeHtml(s)
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.+?)\*/g, "<em>$1</em>");
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    const h = line.match(/^(#{1,4})\s+(.*)/);
+    const ulItem = line.match(/^[-*]\s+(.*)/);
+    const olItem = line.match(/^\d+[.)]\s+(.*)/);
+
+    if (!line) { flushPara(); closeLists(); continue; }
+    if (h) {
+      flushPara(); closeLists();
+      const level = Math.min(h[1].length + 1, 6); // empieza en h2 dentro de la página
+      out.push(`<h${level}>${inline(h[2])}</h${level}>`);
+    } else if (ulItem) {
+      flushPara();
+      if (!inUl) { closeLists(); out.push("<ul>"); inUl = true; }
+      out.push(`<li>${inline(ulItem[1])}</li>`);
+    } else if (olItem) {
+      flushPara();
+      if (!inOl) { closeLists(); out.push("<ol>"); inOl = true; }
+      out.push(`<li>${inline(olItem[1])}</li>`);
+    } else {
+      closeLists();
+      para.push(line);
+    }
+  }
+  flushPara();
+  closeLists();
+  return out.join("\n");
+}

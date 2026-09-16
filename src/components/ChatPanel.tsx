@@ -2,6 +2,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import ExportButtons from "@/components/ExportButtons";
+import SendToMoodleButton from "@/components/SendToMoodleButton";
 
 import { useEffect, useRef, useState } from "react";
 import { Sparkles, Send, Loader2 } from "lucide-react";
@@ -108,8 +109,11 @@ export default function ChatPanel({
           >
             {m.role === "user" ? m.content : <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ table: ({ node, ...props }) => <div className="w-full overflow-x-auto my-1"><table className="text-[11px] border-collapse min-w-max" {...props} /></div>, th: ({ node, ...props }) => <th className="border border-[var(--border-tertiary)] px-2 py-1 bg-[#EEF3FF] text-left font-medium whitespace-nowrap" {...props} />, td: ({ node, ...props }) => <td className="border border-[var(--border-tertiary)] px-2 py-1 align-top" {...props} /> }}>{m.content}</ReactMarkdown>}
             {m.role !== "user" && agentType.startsWith("PROFESSOR") && m.content.length > 200 && (
-              <div className="mt-2 pt-2 border-t border-[var(--border-tertiary)]">
+              <div className="mt-2 pt-2 border-t border-[var(--border-tertiary)] flex items-center gap-2 flex-wrap">
                 <ExportButtons kind="agent_output" size="xs" label="Guardar como:" payload={{ title: `${agentLabel} — ${(messages[i - 1]?.content || "material").slice(0, 60)}`, content: m.content }} />
+                {agentType === "PROFESSOR_STUDY_GUIDE" && (
+                  <SendToMoodleButton suggestedName={(messages[i - 1]?.content || "Guía de estudio").slice(0, 60)} content={m.content} />
+                )}
               </div>
             )}
           </div>
