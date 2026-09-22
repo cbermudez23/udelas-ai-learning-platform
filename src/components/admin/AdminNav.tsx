@@ -8,7 +8,8 @@ const tabs = [
   { href: "/admin/cursos",    label: "Cursos",        short: "Cursos" },
   { href: "/admin/analitica", label: "Analítica",     short: "Analítica" },
   { href: "/admin/biblioteca",label: "Biblioteca",    short: "Bib." },
-  { href: "/admin/ia",        label: "Configuración", short: "Config." }
+  { href: "/admin/ia",        label: "Configuración", short: "Config." },
+  { href: "/admin/importar-curso", label: "Importar Curso", short: "Importar" }
 ];
 
 export default function AdminNav() {
