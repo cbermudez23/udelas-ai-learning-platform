@@ -125,14 +125,19 @@ export function chunkByWords(text: string, size = CHUNK_WORD_SIZE, overlap = CHU
 }
 
 // ---------------------------------------------------------------------------
-// Embeddings (API nativa de Ollama, /api/embeddings)
+// Embeddings: Ollama (/api/embeddings) primero, Voyage AI como respaldo
 // ---------------------------------------------------------------------------
 
-async function embedText(text: string): Promise<number[]> {
+const OLLAMA_TIMEOUT_MS = 8000;
+const VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings";
+const VOYAGE_MODEL = "voyage-large-2";
+
+async function embedWithOllama(text: string): Promise<number[]> {
   const res = await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: EMBEDDING_MODEL, prompt: text.slice(0, 8000) })
+    body: JSON.stringify({ model: EMBEDDING_MODEL, prompt: text.slice(0, 8000) }),
+    signal: AbortSignal.timeout(OLLAMA_TIMEOUT_MS)
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
@@ -144,6 +149,41 @@ async function embedText(text: string): Promise<number[]> {
     throw new Error("Ollama no devolvió un embedding válido.");
   }
   return embedding;
+}
+
+async function embedWithVoyage(text: string): Promise<number[]> {
+  const apiKey = process.env.VOYAGE_API_KEY;
+  if (!apiKey) throw new Error("VOYAGE_API_KEY no está configurada.");
+  const res = await fetch(VOYAGE_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ model: VOYAGE_MODEL, input: [text.slice(0, 8000)] })
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Voyage embeddings respondió HTTP ${res.status}: ${body.slice(0, 300)}`);
+  }
+  const data = await res.json();
+  const embedding = data.data?.[0]?.embedding as number[] | undefined;
+  if (!Array.isArray(embedding) || embedding.length === 0) {
+    throw new Error("Voyage no devolvió un embedding válido.");
+  }
+  return embedding;
+}
+
+async function embedText(text: string): Promise<number[]> {
+  try {
+    return await embedWithOllama(text);
+  } catch (ollamaError) {
+    const reason = ollamaError instanceof Error ? ollamaError.message : String(ollamaError);
+    console.warn(`[knowledge] Ollama falló (${reason}); usando Voyage AI como respaldo.`);
+    try {
+      return await embedWithVoyage(text);
+    } catch (voyageError) {
+      const voyageReason = voyageError instanceof Error ? voyageError.message : String(voyageError);
+      throw new Error(`Embeddings fallaron. Ollama: ${reason} | Voyage: ${voyageReason}`);
+    }
+  }
 }
 
 /** Formatea un vector para usarlo en SQL crudo de pgvector: "[0.1,0.2,...]" */
