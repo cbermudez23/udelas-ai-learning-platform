@@ -14,7 +14,7 @@ const SITE_BASE_URL = "https://www.udelas.ac.pa";
 // Instancia de Ollama dedicada a embeddings (separada del proveedor de chat en src/lib/ai.ts).
 const OLLAMA_BASE_URL = process.env.KNOWLEDGE_OLLAMA_URL || "http://134.122.19.75:11435";
 const EMBEDDING_MODEL = "nomic-embed-text";
-export const EMBEDDING_DIMENSIONS = 768;
+export const EMBEDDING_DIMENSIONS = 512;
 
 const CHUNK_WORD_SIZE = 500;
 const CHUNK_WORD_OVERLAP = 50;
@@ -130,7 +130,7 @@ export function chunkByWords(text: string, size = CHUNK_WORD_SIZE, overlap = CHU
 
 const OLLAMA_TIMEOUT_MS = 8000;
 const VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings";
-const VOYAGE_MODEL = "voyage-large-2";
+const VOYAGE_MODEL = "voyage-3-lite";
 
 async function embedWithOllama(text: string): Promise<number[]> {
   const res = await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {
