@@ -3,7 +3,7 @@
  *
  * scrapeUdelasWebsite() descarga un conjunto fijo de páginas de
  * www.udelas.ac.pa, extrae el texto principal (sin menús ni HTML), lo
- * fragmenta y genera embeddings con Voyage AI (voyage-3-lite) para guardarlos
+ * fragmenta y genera embeddings con Gemini (gemini-embedding-001) para guardarlos
  * en la tabla knowledge_chunks (pgvector). Esta tabla es la base de
  * conocimiento institucional que el Tutor IA / Asesor puede consultar.
  */
@@ -11,11 +11,11 @@ import { prisma } from "@/lib/prisma";
 
 const SITE_BASE_URL = "https://www.udelas.ac.pa";
 
-// Embeddings de la base de conocimiento: Voyage AI voyage-3-lite (512 dimensiones).
-// Distinto del modelo de la Biblioteca IA (voyage-3, 1024 dims, ver src/lib/voyage.ts).
-const VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings";
-const EMBEDDING_MODEL = "voyage-3-lite";
-export const EMBEDDING_DIMENSIONS = 512;
+// Embeddings de la base de conocimiento: Gemini gemini-embedding-001 recortado a 768
+// dimensiones. Distinto del modelo de la Biblioteca IA (voyage-3, 1024 dims, ver src/lib/voyage.ts).
+const EMBEDDING_MODEL = "gemini-embedding-001";
+const GEMINI_EMBED_URL = `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:embedContent`;
+export const EMBEDDING_DIMENSIONS = 768;
 
 const CHUNK_WORD_SIZE = 500;
 const CHUNK_WORD_OVERLAP = 50;
@@ -126,28 +126,38 @@ export function chunkByWords(text: string, size = CHUNK_WORD_SIZE, overlap = CHU
 }
 
 // ---------------------------------------------------------------------------
-// Embeddings (Voyage AI, voyage-3-lite)
+// Embeddings (Gemini, gemini-embedding-001)
 // ---------------------------------------------------------------------------
 
-/** "document" al ingerir fragmentos, "query" al buscar (modo asimétrico de Voyage). */
+/**
+ * "document" al ingerir fragmentos, "query" al buscar (taskType RETRIEVAL_* de Gemini).
+ * Con outputDimensionality < 3072 Gemini no devuelve el vector normalizado, así
+ * que se normaliza aquí para que la distancia coseno sea consistente.
+ */
 async function embedText(text: string, inputType: "document" | "query" = "document"): Promise<number[]> {
-  const apiKey = (process.env.VOYAGE_API_KEY || "").trim();
-  if (!apiKey) throw new Error("VOYAGE_API_KEY no está configurada.");
-  const res = await fetch(VOYAGE_API_URL, {
+  const apiKey = (process.env.GEMINI_API_KEY || "").trim();
+  if (!apiKey) throw new Error("GEMINI_API_KEY no está configurada.");
+  const res = await fetch(GEMINI_EMBED_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ model: EMBEDDING_MODEL, input: [text.slice(0, 8000)], input_type: inputType, truncation: true })
+    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+    body: JSON.stringify({
+      model: `models/${EMBEDDING_MODEL}`,
+      content: { parts: [{ text: text.slice(0, 8000) }] },
+      taskType: inputType === "query" ? "RETRIEVAL_QUERY" : "RETRIEVAL_DOCUMENT",
+      outputDimensionality: EMBEDDING_DIMENSIONS
+    })
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(`Voyage embeddings respondió HTTP ${res.status}: ${body.slice(0, 300)}`);
+    throw new Error(`Gemini embeddings respondió HTTP ${res.status}: ${body.slice(0, 300)}`);
   }
   const data = await res.json();
-  const embedding = data.data?.[0]?.embedding as number[] | undefined;
-  if (!Array.isArray(embedding) || embedding.length !== EMBEDDING_DIMENSIONS) {
-    throw new Error(`Voyage no devolvió un embedding válido de ${EMBEDDING_DIMENSIONS} dimensiones.`);
+  const values = data.embedding?.values as number[] | undefined;
+  if (!Array.isArray(values) || values.length !== EMBEDDING_DIMENSIONS) {
+    throw new Error(`Gemini no devolvió un embedding válido de ${EMBEDDING_DIMENSIONS} dimensiones.`);
   }
-  return embedding;
+  const norm = Math.sqrt(values.reduce((s, x) => s + x * x, 0)) || 1;
+  return values.map((x) => x / norm);
 }
 
 /** Formatea un vector para usarlo en SQL crudo de pgvector: "[0.1,0.2,...]" */
@@ -164,7 +174,7 @@ export interface KnowledgeChunkHit {
 /**
  * Busca los fragmentos más similares (distancia coseno, pgvector) a `query` en
  * knowledge_chunks. Usada por el Tutor IA para enriquecer su prompt con
- * conocimiento institucional de UDELAS. Lanza si Voyage o la tabla no están
+ * conocimiento institucional de UDELAS. Lanza si Gemini o la tabla no están
  * disponibles; el llamador decide si continuar sin este contexto.
  */
 export async function searchKnowledgeChunks(query: string, limit = 3): Promise<KnowledgeChunkHit[]> {
@@ -201,23 +211,28 @@ export async function ensureKnowledgeTable() {
     )
   `);
 
-  // Migración: si la columna tiene otra dimensión (p. ej. 768 de nomic-embed-text de
-  // Ollama), sus vectores no son compatibles con voyage-3-lite. Se borran los
-  // fragmentos y se cambia la columna; hay que volver a ejecutar la ingesta.
-  // En pgvector, atttypmod guarda la dimensión declarada del tipo vector(n).
-  const [col] = await prisma.$queryRawUnsafe<{ dims: number }[]>(
-    `SELECT atttypmod AS dims FROM pg_attribute
+  // Migración: los vectores de otro modelo (nomic-embed-text de Ollama, voyage-3-lite)
+  // no son comparables con los de EMBEDDING_MODEL aunque coincida la dimensión. El
+  // modelo se guarda como comentario de la columna; si no coincide (o la dimensión
+  // es otra) se borran los fragmentos y se ajusta la columna, y hay que volver a
+  // ejecutar la ingesta. En pgvector, atttypmod guarda la dimensión de vector(n).
+  const modelTag = `${EMBEDDING_MODEL}:${EMBEDDING_DIMENSIONS}`;
+  const [col] = await prisma.$queryRawUnsafe<{ dims: number; model: string | null }[]>(
+    `SELECT atttypmod AS dims, col_description(attrelid, attnum) AS model FROM pg_attribute
      WHERE attrelid = 'knowledge_chunks'::regclass AND attname = 'embedding'`
   );
-  if (col && Number(col.dims) !== EMBEDDING_DIMENSIONS) {
+  if (col && col.model !== modelTag) {
     console.warn(
-      `[knowledge] knowledge_chunks.embedding es vector(${col.dims}); migrando a vector(${EMBEDDING_DIMENSIONS}) y borrando fragmentos existentes.`
+      `[knowledge] knowledge_chunks.embedding es vector(${col.dims}) de "${col.model ?? "modelo desconocido"}"; migrando a ${modelTag} y borrando fragmentos existentes.`
     );
     await prisma.$executeRawUnsafe(`DROP INDEX IF EXISTS knowledge_chunks_embedding_idx`);
     await prisma.$executeRawUnsafe(`DELETE FROM knowledge_chunks`);
-    await prisma.$executeRawUnsafe(
-      `ALTER TABLE knowledge_chunks ALTER COLUMN embedding TYPE vector(${EMBEDDING_DIMENSIONS})`
-    );
+    if (Number(col.dims) !== EMBEDDING_DIMENSIONS) {
+      await prisma.$executeRawUnsafe(
+        `ALTER TABLE knowledge_chunks ALTER COLUMN embedding TYPE vector(${EMBEDDING_DIMENSIONS})`
+      );
+    }
+    await prisma.$executeRawUnsafe(`COMMENT ON COLUMN knowledge_chunks.embedding IS '${modelTag}'`);
   }
 
   await prisma.$executeRawUnsafe(
