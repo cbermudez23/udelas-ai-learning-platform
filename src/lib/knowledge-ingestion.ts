@@ -3,7 +3,7 @@
  *
  * scrapeUdelasWebsite() descarga un conjunto fijo de páginas de
  * www.udelas.ac.pa, extrae el texto principal (sin menús ni HTML), lo
- * fragmenta y genera embeddings con Ollama (nomic-embed-text) para guardarlos
+ * fragmenta y genera embeddings con Voyage AI (voyage-3-lite) para guardarlos
  * en la tabla knowledge_chunks (pgvector). Esta tabla es la base de
  * conocimiento institucional que el Tutor IA / Asesor puede consultar.
  */
@@ -11,9 +11,10 @@ import { prisma } from "@/lib/prisma";
 
 const SITE_BASE_URL = "https://www.udelas.ac.pa";
 
-// Instancia de Ollama dedicada a embeddings (separada del proveedor de chat en src/lib/ai.ts).
-const OLLAMA_BASE_URL = process.env.KNOWLEDGE_OLLAMA_URL || "http://134.122.19.75:11435";
-const EMBEDDING_MODEL = "nomic-embed-text";
+// Embeddings de la base de conocimiento: Voyage AI voyage-3-lite (512 dimensiones).
+// Distinto del modelo de la Biblioteca IA (voyage-3, 1024 dims, ver src/lib/voyage.ts).
+const VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings";
+const EMBEDDING_MODEL = "voyage-3-lite";
 export const EMBEDDING_DIMENSIONS = 512;
 
 const CHUNK_WORD_SIZE = 500;
@@ -125,39 +126,17 @@ export function chunkByWords(text: string, size = CHUNK_WORD_SIZE, overlap = CHU
 }
 
 // ---------------------------------------------------------------------------
-// Embeddings: Ollama (/api/embeddings) primero, Voyage AI como respaldo
+// Embeddings (Voyage AI, voyage-3-lite)
 // ---------------------------------------------------------------------------
 
-const OLLAMA_TIMEOUT_MS = 8000;
-const VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings";
-const VOYAGE_MODEL = "voyage-3-lite";
-
-async function embedWithOllama(text: string): Promise<number[]> {
-  const res = await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: EMBEDDING_MODEL, prompt: text.slice(0, 8000) }),
-    signal: AbortSignal.timeout(OLLAMA_TIMEOUT_MS)
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Ollama embeddings respondió HTTP ${res.status}: ${body.slice(0, 300)}`);
-  }
-  const data = await res.json();
-  const embedding = data.embedding as number[] | undefined;
-  if (!Array.isArray(embedding) || embedding.length === 0) {
-    throw new Error("Ollama no devolvió un embedding válido.");
-  }
-  return embedding;
-}
-
-async function embedWithVoyage(text: string): Promise<number[]> {
-  const apiKey = process.env.VOYAGE_API_KEY;
+/** "document" al ingerir fragmentos, "query" al buscar (modo asimétrico de Voyage). */
+async function embedText(text: string, inputType: "document" | "query" = "document"): Promise<number[]> {
+  const apiKey = (process.env.VOYAGE_API_KEY || "").trim();
   if (!apiKey) throw new Error("VOYAGE_API_KEY no está configurada.");
   const res = await fetch(VOYAGE_API_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ model: VOYAGE_MODEL, input: [text.slice(0, 8000)] })
+    body: JSON.stringify({ model: EMBEDDING_MODEL, input: [text.slice(0, 8000)], input_type: inputType, truncation: true })
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
@@ -165,25 +144,10 @@ async function embedWithVoyage(text: string): Promise<number[]> {
   }
   const data = await res.json();
   const embedding = data.data?.[0]?.embedding as number[] | undefined;
-  if (!Array.isArray(embedding) || embedding.length === 0) {
-    throw new Error("Voyage no devolvió un embedding válido.");
+  if (!Array.isArray(embedding) || embedding.length !== EMBEDDING_DIMENSIONS) {
+    throw new Error(`Voyage no devolvió un embedding válido de ${EMBEDDING_DIMENSIONS} dimensiones.`);
   }
   return embedding;
-}
-
-async function embedText(text: string): Promise<number[]> {
-  try {
-    return await embedWithOllama(text);
-  } catch (ollamaError) {
-    const reason = ollamaError instanceof Error ? ollamaError.message : String(ollamaError);
-    console.warn(`[knowledge] Ollama falló (${reason}); usando Voyage AI como respaldo.`);
-    try {
-      return await embedWithVoyage(text);
-    } catch (voyageError) {
-      const voyageReason = voyageError instanceof Error ? voyageError.message : String(voyageError);
-      throw new Error(`Embeddings fallaron. Ollama: ${reason} | Voyage: ${voyageReason}`);
-    }
-  }
 }
 
 /** Formatea un vector para usarlo en SQL crudo de pgvector: "[0.1,0.2,...]" */
@@ -200,11 +164,12 @@ export interface KnowledgeChunkHit {
 /**
  * Busca los fragmentos más similares (distancia coseno, pgvector) a `query` en
  * knowledge_chunks. Usada por el Tutor IA para enriquecer su prompt con
- * conocimiento institucional de UDELAS. Lanza si Ollama o la tabla no están
+ * conocimiento institucional de UDELAS. Lanza si Voyage o la tabla no están
  * disponibles; el llamador decide si continuar sin este contexto.
  */
 export async function searchKnowledgeChunks(query: string, limit = 3): Promise<KnowledgeChunkHit[]> {
-  const embedding = await embedText(query);
+  await ensureKnowledgeTable();
+  const embedding = await embedText(query, "query");
   const vector = toVectorLiteral(embedding);
   return prisma.$queryRawUnsafe<KnowledgeChunkHit[]>(
     `SELECT content, source, url FROM knowledge_chunks ORDER BY embedding <=> $1::vector LIMIT $2`,
@@ -235,6 +200,26 @@ export async function ensureKnowledgeTable() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
   `);
+
+  // Migración: si la columna tiene otra dimensión (p. ej. 768 de nomic-embed-text de
+  // Ollama), sus vectores no son compatibles con voyage-3-lite. Se borran los
+  // fragmentos y se cambia la columna; hay que volver a ejecutar la ingesta.
+  // En pgvector, atttypmod guarda la dimensión declarada del tipo vector(n).
+  const [col] = await prisma.$queryRawUnsafe<{ dims: number }[]>(
+    `SELECT atttypmod AS dims FROM pg_attribute
+     WHERE attrelid = 'knowledge_chunks'::regclass AND attname = 'embedding'`
+  );
+  if (col && Number(col.dims) !== EMBEDDING_DIMENSIONS) {
+    console.warn(
+      `[knowledge] knowledge_chunks.embedding es vector(${col.dims}); migrando a vector(${EMBEDDING_DIMENSIONS}) y borrando fragmentos existentes.`
+    );
+    await prisma.$executeRawUnsafe(`DROP INDEX IF EXISTS knowledge_chunks_embedding_idx`);
+    await prisma.$executeRawUnsafe(`DELETE FROM knowledge_chunks`);
+    await prisma.$executeRawUnsafe(
+      `ALTER TABLE knowledge_chunks ALTER COLUMN embedding TYPE vector(${EMBEDDING_DIMENSIONS})`
+    );
+  }
+
   await prisma.$executeRawUnsafe(
     `CREATE INDEX IF NOT EXISTS knowledge_chunks_embedding_idx ON knowledge_chunks USING hnsw (embedding vector_cosine_ops)`
   );
