@@ -6,8 +6,8 @@
 
 import { useState, useRef } from "react";
 import { Upload, FileText, Loader2, CheckCircle2, AlertCircle, ExternalLink, ChevronDown, ChevronRight, Trash2, Plus } from "lucide-react";
-import type { CourseStructure, CourseSection, CourseActivity } from "@/app/api/course/import/route";
-import type { BuildResult } from "@/app/api/course/build/route";
+import type { CourseStructure, CourseSection, CourseActivity } from "@/app/api/courses/import/route";
+import type { BuildResult } from "@/app/api/courses/build/route";
 
 // ─── Tipos de estado ──────────────────────────────────────────────────────────
 type Step = "upload" | "analyzing" | "preview" | "building" | "done" | "error";
@@ -45,7 +45,7 @@ export default function ImportarCursoPage() {
     form.append("file", file);
 
     try {
-      const res = await fetch("/api/course/import", { method: "POST", body: form });
+      const res = await fetch("/api/courses/import", { method: "POST", body: form });
       const data = await res.json();
       if (!res.ok || !data.success) {
         setErrorMsg(data.error ?? "Error al analizar el documento");
@@ -65,13 +65,18 @@ export default function ImportarCursoPage() {
     setStep("building");
 
     try {
-      const res = await fetch("/api/course/build", {
+      const res = await fetch("/api/courses/build", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ structure, categoryId, startDate }),
       });
-      const data: BuildResult = await res.json();
-      setBuildResult(data);
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setErrorMsg(data.error ?? "Error al crear el curso en Moodle");
+        setStep("error");
+        return;
+      }
+      setBuildResult(data as BuildResult);
       setStep("done");
     } catch {
       setErrorMsg("Error de red al crear el curso en Moodle.");
@@ -413,7 +418,7 @@ export default function ImportarCursoPage() {
             <ul className="list-disc list-inside space-y-0.5 text-blue-700 dark:text-blue-400">
               <li>{structure.sections.length} secciones (bloques MAVU)</li>
               <li>{structure.sections.reduce((s, sec) => s + sec.activities.length, 0)} actividades en total</li>
-              <li>Curso oculto hasta que lo revises y publiques en Moodle</li>
+              <li>Cuestionarios y enlaces (URL) se crean manualmente en Moodle después</li>
               <li>Inicio: {new Date(startDate).toLocaleDateString("es-PA", { dateStyle: "long" })}</li>
             </ul>
           </div>

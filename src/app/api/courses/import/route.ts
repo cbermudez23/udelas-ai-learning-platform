@@ -1,4 +1,4 @@
-// src/app/api/course/import/route.ts
+// src/app/api/courses/import/route.ts
 // Recibe un archivo (DOCX o PDF), extrae el texto y llama a Claude
 // para obtener un JSON con la estructura completa del curso.
 
@@ -62,9 +62,10 @@ async function extractText(file: File): Promise<string> {
 
   if (mime === "application/pdf" || file.name.endsWith(".pdf")) {
     // unpdf también está disponible
-    const { extractTextFromPDF } = await import("unpdf");
-    const { text } = await extractTextFromPDF(new Uint8Array(buffer));
-    return text ?? "";
+    const { extractText: pdfExtract, getDocumentProxy } = await import("unpdf");
+    const pdf = await getDocumentProxy(new Uint8Array(buffer));
+    const { text } = await pdfExtract(pdf, { mergePages: true });
+    return String(text ?? "");
   }
 
   if (mime === "text/plain" || file.name.endsWith(".txt") || file.name.endsWith(".md")) {
@@ -131,7 +132,7 @@ SCHEMA JSON ESPERADO:
 export async function POST(req: NextRequest) {
   // Auth: solo admins
   const session = await getServerSession(authOptions);
-  if (!session || session.user?.role !== "admin") {
+  if (!session || session.user?.role !== "ADMIN") {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
@@ -168,7 +169,7 @@ export async function POST(req: NextRequest) {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     const response = await client.messages.create({
-      model: settings.model ?? "claude-sonnet-4-6",
+      model: settings.anthropicModel,
       max_tokens: 8000,
       system: SYSTEM_PROMPT,
       messages: [
